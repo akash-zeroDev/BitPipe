@@ -1,5 +1,7 @@
-import { useState } from "react";
-import { Download, Settings, Video, Headphones, ChevronDown, ChevronUp, Check, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Download, Settings, Video, Headphones, ChevronDown, ChevronUp, Check, X, Scissors, Archive } from "lucide-react";
+import Slider from 'rc-slider';
+import 'rc-slider/assets/index.css';
 
 function App() {
   const [url, setUrl] = useState("");
@@ -13,6 +15,38 @@ function App() {
   
   const [videoFormats, setVideoFormats] = useState([]);
   const [audioFormats, setAudioFormats] = useState([]);
+  
+  // Trimming State
+  const [isTrimming, setIsTrimming] = useState(false);
+  const [startTime, setStartTime] = useState(0);
+  const [endTime, setEndTime] = useState(0);
+  const [startInput, setStartInput] = useState("0:00");
+  const [endInput, setEndInput] = useState("0:00");
+
+  // Batch Queue State
+  const [queue, setQueue] = useState([]);
+  const [showQueue, setShowQueue] = useState(false);
+  const [jobId, setJobId] = useState(null);
+  const [batchStatus, setBatchStatus] = useState(null); // 'processing', 'completed', 'error'
+  const [batchProgress, setBatchProgress] = useState(0);
+  const [batchTotal, setBatchTotal] = useState(0);
+  const [batchTitle, setBatchTitle] = useState("");
+
+  const parseTime = (timeStr) => {
+    if (!timeStr) return 0;
+    const parts = timeStr.toString().split(':').map(Number);
+    if (parts.length === 3) return (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
+    if (parts.length === 2) return (parts[0] || 0) * 60 + (parts[1] || 0);
+    return parseInt(parts[0]) || 0;
+  };
+
+  const formatTime = (seconds) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
   
   const [selectedVideo, setSelectedVideo] = useState("");
   const [selectedAudio, setSelectedAudio] = useState("");
@@ -63,6 +97,12 @@ function App() {
         if (uniqueVids.length > 0) setSelectedVideo(uniqueVids[0].format_id);
         if (uniqueAuds.length > 0) setSelectedAudio(uniqueAuds[0].format_id);
 
+        const dur = json.data?.duration || 0;
+        setStartTime(0);
+        setStartInput(formatTime(0));
+        setEndTime(dur);
+        setEndInput(formatTime(dur));
+
         setData(json);
         setDetail(true);
       } else {
@@ -87,7 +127,75 @@ function App() {
     }
   };
 
-  const handleDownload = (isDefault = true) => {
+  useEffect(() => {
+    if (!jobId) return;
+
+    const eventSource = new EventSource(`${apiUrl}/progress?jobId=${jobId}`);
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      setBatchStatus(data.status);
+      setBatchProgress(data.progress);
+      setBatchTotal(data.total);
+      setBatchTitle(data.currentTitle);
+
+      if (data.status === 'completed') {
+        eventSource.close();
+        setJobId(null);
+        // Trigger download
+        const a = document.createElement('a');
+        a.href = `${apiUrl}/downloadJob/${jobId}`;
+        a.download = 'BitPipe_Batch.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else if (data.status === 'error') {
+        eventSource.close();
+        setJobId(null);
+        alert("Batch download failed on the server.");
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error("EventSource failed:", error);
+      eventSource.close();
+      setJobId(null);
+      setBatchStatus('error');
+    };
+
+    return () => eventSource.close();
+  }, [jobId]);
+
+  const downloadBatch = async () => {
+    if (queue.length === 0) return;
+    setBatchStatus('processing');
+    setBatchProgress(0);
+    setBatchTotal(queue.length);
+    setBatchTitle('Initializing...');
+    
+    try {
+      const res = await fetch(`${apiUrl}/downloadBatch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ items: queue })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setJobId(data.jobId);
+      } else {
+        alert("Failed to start batch download: " + data.error);
+        setBatchStatus('error');
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error starting batch.");
+      setBatchStatus('error');
+    }
+  };
+
+  const handleDownload = (isDefault = true, addToQueue = false) => {
     let finalFormat = "bestvideo+bestaudio/best";
     let ext = "mkv";
     
@@ -105,15 +213,42 @@ function App() {
         alert("Please enable at least Audio or Video!");
         return;
       }
+
+      if (isTrimming) {
+        ext = "mkv";
+      }
+    }
+
+    if (addToQueue) {
+      const item = {
+        videoURL: url,
+        format_id: finalFormat,
+        ext: ext,
+        title: data?.data?.title || "Video",
+        thumbnail: data?.data?.thumbnail
+      };
+      if (isTrimming && startTime !== undefined && endTime !== undefined) {
+        item.startTime = startTime;
+        item.endTime = endTime;
+      }
+      setQueue([...queue, item]);
+      return;
     }
 
     try {
-      const query = new URLSearchParams({
+      const queryParams = {
         videoURL: url,
         format_id: finalFormat,
         ext: ext,
         title: data?.data?.title || "Video"
-      }).toString();
+      };
+
+      if (isTrimming && startTime && endTime) {
+        queryParams.startTime = startTime;
+        queryParams.endTime = endTime;
+      }
+
+      const query = new URLSearchParams(queryParams).toString();
       
       window.location.href = `${apiUrl}/downloadVideo?${query}`;
     } catch (err) {
@@ -123,6 +258,81 @@ function App() {
 
   return (
     <>
+      {/* Floating Queue Button */}
+      <button 
+        onClick={() => setShowQueue(true)}
+        className="fixed top-6 right-6 bg-white/30 backdrop-blur-md border border-white/50 text-white p-3 rounded-full shadow-lg hover:bg-white/40 transition flex items-center gap-2 z-40"
+      >
+        <Archive size={24} />
+        {queue.length > 0 && (
+          <span className="bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+            {queue.length}
+          </span>
+        )}
+      </button>
+
+      {/* Queue Drawer Modal */}
+      {showQueue && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-end z-50">
+          <div className="w-full md:w-96 bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="p-5 border-b flex justify-between items-center bg-indigo-600 text-white">
+              <h2 className="text-xl font-bold flex items-center gap-2"><Archive size={24}/> Batch Queue</h2>
+              <button onClick={() => setShowQueue(false)} className="hover:bg-indigo-700 p-2 rounded-full transition"><X size={24} /></button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-gray-50">
+              {queue.length === 0 ? (
+                <div className="text-center text-gray-500 mt-10 font-medium">Your queue is empty.</div>
+              ) : (
+                queue.map((item, idx) => (
+                  <div key={idx} className="flex gap-3 bg-white p-3 rounded-xl shadow-sm border border-gray-100 items-center">
+                    <img src={item.thumbnail} className="w-20 h-14 object-cover rounded-md" alt="thumb" />
+                    <div className="flex-1 overflow-hidden">
+                      <p className="text-sm font-bold text-gray-800 truncate">{item.title}</p>
+                      <p className="text-xs text-gray-500 mt-1 uppercase font-semibold">{item.ext} • {item.startTime ? 'Trimmed' : 'Full'}</p>
+                    </div>
+                    <button 
+                      onClick={() => setQueue(queue.filter((_, i) => i !== idx))}
+                      className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {queue.length > 0 && (
+              <div className="p-4 border-t border-[#30363d] bg-[#161b22]">
+              {batchStatus === 'processing' ? (
+                <div className="w-full">
+                  <div className="flex justify-between text-sm text-[#8b949e] mb-2">
+                    <span>{batchTitle}</span>
+                    <span>{batchProgress} / {batchTotal}</span>
+                  </div>
+                  <div className="w-full bg-[#0d1117] rounded-full h-2.5">
+                    <div 
+                      className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                      style={{ width: `${batchTotal > 0 ? (batchProgress / batchTotal) * 100 : 0}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={downloadBatch}
+                  disabled={queue.length === 0}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Download size={20} />
+                  Download All as ZIP
+                </button>
+              )}
+            </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="min-h-screen w-full bg-gradient-to-br from-blue-400 to-pink-300 flex items-center justify-center p-4">
         <div className="bg-white/20 w-full md:w-3/4 h-auto md:h-3/4 backdrop-blur-lg rounded-2xl border border-white/30 shadow-lg p-4 md:p-6">
           <h1 className="text-white text-3xl md:text-5xl text-center md:text-left font-bold mt-4">
@@ -169,14 +379,79 @@ function App() {
               {/* Download Controls */}
               <div className="flex flex-col gap-4 justify-center">
                 
-                {/* BIG Default Download Button */}
+                {/* Default Download Buttons */}
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => handleDownload(true, false)}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg transform hover:-translate-y-1"
+                  >
+                    <Download size={20} /> Download Highest Quality
+                  </button>
+                  <button 
+                    onClick={() => handleDownload(true, true)}
+                    className="bg-pink-500 hover:bg-pink-600 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition shadow-lg transform hover:-translate-y-1"
+                  >
+                    <Archive size={20} /> Add to Queue
+                  </button>
+                </div>
+
+                {/* Trimming Toggle */}
                 <button 
-                  onClick={() => handleDownload(true)}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-3 transition shadow-lg transform hover:-translate-y-1"
+                  onClick={() => setIsTrimming(!isTrimming)}
+                  className="mt-2 text-gray-700 font-semibold flex items-center justify-center gap-2 hover:text-indigo-800 transition"
                 >
-                  <Download size={24} />
-                  Download Highest Quality (Combined)
+                  <Scissors size={18} />
+                  {isTrimming ? "Disable Trimming" : "Trim Video Snippet"}
                 </button>
+
+                {isTrimming && (
+                  <div className="mt-2 p-5 bg-white/60 rounded-xl border border-white/40 flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                    <div className="flex justify-between items-center mb-2">
+                      <input 
+                        className="font-bold text-gray-700 bg-white px-3 py-1 rounded-lg shadow-sm border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-24 text-center"
+                        value={startInput}
+                        onChange={(e) => setStartInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                        onBlur={() => {
+                          const s = parseTime(startInput);
+                          setStartTime(s);
+                          setStartInput(formatTime(s));
+                        }}
+                      />
+                      <input 
+                        className="font-bold text-gray-700 bg-white px-3 py-1 rounded-lg shadow-sm border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-24 text-center"
+                        value={endInput}
+                        onChange={(e) => setEndInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                        onBlur={() => {
+                          const eTime = parseTime(endInput);
+                          setEndTime(eTime);
+                          setEndInput(formatTime(eTime));
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="px-2 pb-2">
+                      <Slider 
+                        range 
+                        min={0} 
+                        max={data?.data?.duration || 100} 
+                        value={[startTime, endTime]} 
+                        onChange={(val) => { 
+                          setStartTime(val[0]); 
+                          setEndTime(val[1]); 
+                          setStartInput(formatTime(val[0]));
+                          setEndInput(formatTime(val[1]));
+                        }} 
+                        styles={{
+                          track: { backgroundColor: '#4f46e5', height: 8 },
+                          handle: { borderColor: '#4f46e5', height: 20, width: 20, marginTop: -6, backgroundColor: '#fff', opacity: 1, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' },
+                          rail: { backgroundColor: '#e5e7eb', height: 8 }
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Advanced Settings Toggle */}
                 <button 
@@ -244,13 +519,22 @@ function App() {
                       </select>
                     </div>
 
-                    <button 
-                      onClick={() => handleDownload(false)}
-                      className="w-full mt-2 bg-gray-800 hover:bg-black text-white font-bold py-4 px-4 rounded-lg flex items-center justify-center gap-2 transition"
-                    >
-                      <Download size={20} />
-                      Download {includeVideo && includeAudio ? "Combined File" : includeVideo ? "Video Only" : "Audio Only"}
-                    </button>
+                    <div className="flex gap-3 mt-2">
+                      <button 
+                        onClick={() => handleDownload(false, false)}
+                        className="flex-1 bg-gray-800 hover:bg-black text-white font-bold py-4 px-4 rounded-lg flex items-center justify-center gap-2 transition"
+                      >
+                        <Download size={20} />
+                        Download {includeVideo && includeAudio ? "Combined" : includeVideo ? "Video" : "Audio"}
+                      </button>
+                      <button 
+                        onClick={() => handleDownload(false, true)}
+                        className="flex-1 bg-pink-500 hover:bg-pink-600 text-white font-bold py-4 px-4 rounded-lg flex items-center justify-center gap-2 transition"
+                      >
+                        <Archive size={20} />
+                        Add to Queue
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
