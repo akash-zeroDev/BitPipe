@@ -15,7 +15,7 @@ const app = express();
 const logger = progressEstimator();
 app.use(
   cors({
-    origin: "http://localhost:8000",
+    origin: process.env.FRONTEND_URL || "http://localhost:8000",
     credentials: true,
   })
 );
@@ -356,5 +356,3 @@ app.post("/downloadBatch", async (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port http://localhost:${port}`);
 });
-
-// Triggering production deployment
