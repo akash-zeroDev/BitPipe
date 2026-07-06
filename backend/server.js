@@ -439,11 +439,15 @@ app.get("/getPlaylistLength", async (req, res) => {
 
     let totalDuration = 0;
     let videoCount = 0;
+    let durations = [];
 
     info.entries.forEach(entry => {
       if (entry.duration) {
         totalDuration += entry.duration;
         videoCount++;
+        durations.push(entry.duration);
+      } else {
+        durations.push(0);
       }
     });
 
@@ -453,7 +457,8 @@ app.get("/getPlaylistLength", async (req, res) => {
         title: info.title || "Unknown Playlist",
         totalDuration,
         videoCount,
-        channel: info.uploader || "Unknown"
+        channel: info.uploader || "Unknown",
+        durations
       }
     });
   } catch (error) {

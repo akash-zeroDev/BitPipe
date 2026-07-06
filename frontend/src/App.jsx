@@ -33,6 +33,9 @@ function App() {
   const [isPlaylistLoading, setIsPlaylistLoading] = useState(false);
   const [playlistData, setPlaylistData] = useState(null);
   const [playlistError, setPlaylistError] = useState(false);
+  const [playlistStart, setPlaylistStart] = useState("");
+  const [playlistEnd, setPlaylistEnd] = useState("");
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [jobId, setJobId] = useState(null);
   const [batchStatus, setBatchStatus] = useState(null); // 'processing', 'completed', 'error'
   const [batchProgress, setBatchProgress] = useState(0);
@@ -268,6 +271,9 @@ function App() {
     setIsPlaylistLoading(true);
     setPlaylistError(false);
     setPlaylistData(null);
+    setPlaylistStart("");
+    setPlaylistEnd("");
+    setPlaybackSpeed(1);
     try {
       const response = await fetch(`${apiUrl}/getPlaylistLength?playlistURL=${encodeURIComponent(playlistUrl)}`);
       const res = await response.json();
@@ -282,6 +288,31 @@ function App() {
     } finally {
       setIsPlaylistLoading(false);
     }
+  };
+
+  const getCalculatedDuration = () => {
+    if (!playlistData) return 0;
+    const totalVids = playlistData.durations.length;
+    const sIdx = Math.max(1, parseInt(playlistStart) || 1) - 1;
+    let eIdx = parseInt(playlistEnd);
+    if (isNaN(eIdx) || eIdx > totalVids) eIdx = totalVids;
+    
+    if (sIdx >= eIdx) return 0;
+    
+    const slice = playlistData.durations.slice(sIdx, eIdx);
+    const sum = slice.reduce((a, b) => a + b, 0);
+    return sum / parseFloat(playbackSpeed || 1);
+  };
+  
+  const getCalculatedVideoCount = () => {
+    if (!playlistData) return 0;
+    const totalVids = playlistData.durations.length;
+    const sIdx = Math.max(1, parseInt(playlistStart) || 1) - 1;
+    let eIdx = parseInt(playlistEnd);
+    if (isNaN(eIdx) || eIdx > totalVids) eIdx = totalVids;
+    
+    if (sIdx >= eIdx) return 0;
+    return eIdx - sIdx;
   };
 
   const formatDuration = (totalSeconds) => {
@@ -638,13 +669,36 @@ function App() {
                     <h2 className="text-2xl font-bold text-gray-800 line-clamp-2">{playlistData.title}</h2>
                     <p className="text-gray-500 font-medium">by {playlistData.channel}</p>
                     
+                    {/* Advanced Settings */}
+                    <div className="w-full bg-white/50 rounded-xl p-4 mt-4 border border-white/60 shadow-sm flex flex-col md:flex-row gap-4 justify-between">
+                      <div className="flex flex-col text-left flex-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase mb-1">Start Video</label>
+                        <input type="number" min={1} max={playlistData.durations.length} className="bg-white p-2 rounded-lg border-gray-200 outline-none w-full text-sm" placeholder="1" value={playlistStart} onChange={(e) => setPlaylistStart(e.target.value)} />
+                      </div>
+                      <div className="flex flex-col text-left flex-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase mb-1">End Video</label>
+                        <input type="number" min={1} max={playlistData.durations.length} className="bg-white p-2 rounded-lg border-gray-200 outline-none w-full text-sm" placeholder={playlistData.durations.length} value={playlistEnd} onChange={(e) => setPlaylistEnd(e.target.value)} />
+                      </div>
+                      <div className="flex flex-col text-left flex-1">
+                        <label className="text-xs font-bold text-gray-500 uppercase mb-1">Speed</label>
+                        <select className="bg-white p-2 rounded-lg border-gray-200 outline-none w-full text-sm" value={playbackSpeed} onChange={(e) => setPlaybackSpeed(e.target.value)}>
+                          <option value="0.5">0.5x</option>
+                          <option value="1">1x (Normal)</option>
+                          <option value="1.25">1.25x</option>
+                          <option value="1.5">1.5x</option>
+                          <option value="1.75">1.75x</option>
+                          <option value="2">2x</option>
+                        </select>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4 w-full mt-6">
                       <div className="bg-white/80 rounded-xl p-4 flex flex-col items-center shadow-sm">
-                        <span className="text-3xl font-extrabold text-indigo-600">{playlistData.videoCount}</span>
+                        <span className="text-3xl font-extrabold text-indigo-600">{getCalculatedVideoCount()}</span>
                         <span className="text-xs text-gray-500 font-bold uppercase mt-1">Videos</span>
                       </div>
                       <div className="bg-white/80 rounded-xl p-4 flex flex-col items-center shadow-sm">
-                        <span className="text-3xl font-extrabold text-pink-600">{formatDuration(playlistData.totalDuration)}</span>
+                        <span className="text-3xl font-extrabold text-pink-600">{formatDuration(getCalculatedDuration())}</span>
                         <span className="text-xs text-gray-500 font-bold uppercase mt-1">Total Time</span>
                       </div>
                     </div>
