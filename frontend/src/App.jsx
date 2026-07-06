@@ -243,7 +243,7 @@ function App() {
         title: data?.data?.title || "Video"
       };
 
-      if (isTrimming && startTime && endTime) {
+      if (isTrimming && startTime !== undefined && endTime !== undefined) {
         queryParams.startTime = startTime;
         queryParams.endTime = endTime;
       }
