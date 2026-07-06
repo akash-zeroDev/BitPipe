@@ -269,9 +269,10 @@ function App() {
     setPlaylistError(false);
     setPlaylistData(null);
     try {
-      const res = await axios.get(`${apiUrl}/getPlaylistLength?playlistURL=${encodeURIComponent(playlistUrl)}`);
-      if (res.data.success) {
-        setPlaylistData(res.data.data);
+      const response = await fetch(`${apiUrl}/getPlaylistLength?playlistURL=${encodeURIComponent(playlistUrl)}`);
+      const res = await response.json();
+      if (res.success) {
+        setPlaylistData(res.data);
       } else {
         setPlaylistError(true);
       }
