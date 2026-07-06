@@ -15,7 +15,9 @@ const app = express();
 const logger = progressEstimator();
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:8000",
+    origin: function (origin, callback) {
+      callback(null, true);
+    },
     credentials: true,
   })
 );
