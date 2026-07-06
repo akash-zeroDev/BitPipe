@@ -659,24 +659,28 @@ function App() {
 
               {playlistData && (
                 <div className="mt-10 bg-gray-900 rounded-[2rem] p-8 md:p-12 w-full max-w-2xl border border-gray-800 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
-                  <div className="flex flex-col gap-2 items-center text-center">
-                    <span className="bg-gray-800 text-gray-300 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-4 border border-gray-700">Analysis Complete</span>
-                    <h2 className="text-3xl font-extrabold text-white line-clamp-2 leading-tight">{playlistData.title}</h2>
-                    <p className="text-gray-400 font-medium mt-1 text-lg">by {playlistData.channel}</p>
+                  <div className="flex flex-col w-full">
                     
-                    {/* Advanced Settings */}
-                    <div className="w-full bg-gray-950 rounded-2xl p-6 mt-8 border border-gray-800 shadow-inner flex flex-col md:flex-row gap-6 justify-between">
-                      <div className="flex flex-col text-left flex-1">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Start Video</label>
-                        <input type="number" min={1} max={playlistData.durations.length} className="bg-gray-900 text-white p-3 rounded-xl border border-gray-800 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 w-full text-sm transition" placeholder="1" value={playlistStart} onChange={(e) => setPlaylistStart(e.target.value)} />
+                    {/* Header Section */}
+                    <div className="flex flex-col items-center text-center pb-6 border-b border-gray-800">
+                      <span className="bg-gray-800 text-gray-300 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-4 border border-gray-700">Analysis Complete</span>
+                      <h2 className="text-2xl font-extrabold text-white line-clamp-2 leading-tight">{playlistData.title}</h2>
+                      <p className="text-gray-400 font-medium mt-1">by {playlistData.channel}</p>
+                    </div>
+                    
+                    {/* The Inputs Grid */}
+                    <div className="grid grid-cols-3 gap-4 w-full mt-8">
+                      <div className="flex flex-col text-left">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">Start Video</label>
+                        <input type="number" min={1} max={playlistData.durations.length} className="bg-gray-950 text-white p-2.5 rounded-xl border border-gray-800 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 w-full text-sm transition" placeholder="1" value={playlistStart} onChange={(e) => setPlaylistStart(e.target.value)} />
                       </div>
-                      <div className="flex flex-col text-left flex-1">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">End Video</label>
-                        <input type="number" min={1} max={playlistData.durations.length} className="bg-white p-2 rounded-lg border-gray-200 outline-none w-full text-sm" placeholder={playlistData.durations.length} value={playlistEnd} onChange={(e) => setPlaylistEnd(e.target.value)} />
+                      <div className="flex flex-col text-left">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">End Video</label>
+                        <input type="number" min={1} max={playlistData.durations.length} className="bg-gray-950 text-white p-2.5 rounded-xl border border-gray-800 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 w-full text-sm transition" placeholder={playlistData.durations.length} value={playlistEnd} onChange={(e) => setPlaylistEnd(e.target.value)} />
                       </div>
-                      <div className="flex flex-col text-left flex-1">
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Speed</label>
-                        <select className="bg-white p-2 rounded-lg border-gray-200 outline-none w-full text-sm" value={playbackSpeed} onChange={(e) => setPlaybackSpeed(e.target.value)}>
+                      <div className="flex flex-col text-left">
+                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">Speed</label>
+                        <select className="bg-gray-950 text-white p-2.5 rounded-xl border border-gray-800 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 w-full text-sm transition" value={playbackSpeed} onChange={(e) => setPlaybackSpeed(e.target.value)}>
                           <option value="0.5">0.5x</option>
                           <option value="1">1x (Normal)</option>
                           <option value="1.25">1.25x</option>
@@ -687,16 +691,18 @@ function App() {
                       </div>
                     </div>
 
+                    {/* Metric Cards */}
                     <div className="grid grid-cols-2 gap-6 w-full mt-8">
-                      <div className="bg-gray-950 border border-gray-800 rounded-2xl p-6 flex flex-col items-center justify-center shadow-sm">
-                        <span className="text-4xl font-extrabold text-white">{getCalculatedVideoCount()}</span>
-                        <span className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-2">Videos</span>
+                      <div className="bg-slate-100 rounded-2xl p-6 flex flex-col items-center justify-center shadow-lg border border-slate-200">
+                        <span className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-1">Total Videos</span>
+                        <span className="text-5xl font-extrabold text-gray-900 tracking-tight">{getCalculatedVideoCount()}</span>
                       </div>
-                      <div className="bg-white/80 rounded-xl p-4 flex flex-col items-center shadow-sm">
-                        <span className="text-4xl font-extrabold text-white">{formatDuration(getCalculatedDuration())}</span>
-                        <span className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-2">Total Time</span>
+                      <div className="bg-slate-100 rounded-2xl p-6 flex flex-col items-center justify-center shadow-lg border border-slate-200">
+                        <span className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-1">Total Time</span>
+                        <span className="text-5xl font-extrabold text-gray-900 tracking-tight">{formatDuration(getCalculatedDuration())}</span>
                       </div>
                     </div>
+
                   </div>
                 </div>
               )}
