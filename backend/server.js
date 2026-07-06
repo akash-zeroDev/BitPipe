@@ -9,8 +9,11 @@ import path from "path";
 import crypto from "crypto";
 import ffmpegPathDefault from "ffmpeg-static";
 import { ZipArchive } from "archiver";
+import NodeCache from "node-cache";
+import ytdlCore from "@distube/ytdl-core";
 
 const ffmpegPath = typeof ffmpegPathDefault === 'string' ? ffmpegPathDefault : ffmpegPathDefault.default || ffmpegPathDefault.path || ffmpegPathDefault;
+const cache = new NodeCache({ stdTTL: 3600 }); // Cache responses for 1 hour
 
 const app = express();
 const logger = progressEstimator();
@@ -417,6 +420,16 @@ app.post("/downloadBatch", async (req, res) => {
   }
 });
 
+// Helper: Convert YouTube ISO 8601 duration (PT1H2M10S) to seconds
+function parseISO8601Duration(duration) {
+  const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+  if (!match) return 0;
+  const hours = (parseInt(match[1]) || 0);
+  const minutes = (parseInt(match[2]) || 0);
+  const seconds = (parseInt(match[3]) || 0);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
 app.get("/getPlaylistLength", async (req, res) => {
   const { playlistURL } = req.query;
   if (!playlistURL) {
@@ -424,6 +437,80 @@ app.get("/getPlaylistLength", async (req, res) => {
   }
 
   try {
+    const apiKey = process.env.YOUTUBE_API;
+    let listId = null;
+    
+    // Attempt to extract the list= ID
+    try {
+      const urlObj = new URL(playlistURL);
+      listId = urlObj.searchParams.get("list");
+    } catch(e) {}
+
+    // 1. Check Cache
+    const cacheKey = `playlist_${listId || playlistURL}`;
+    const cachedData = cache.get(cacheKey);
+    if (cachedData) {
+      console.log(`[Cache Hit] /getPlaylistLength: ${playlistURL}`);
+      return res.json({ success: true, data: cachedData });
+    }
+
+    // 2. YouTube Data API (Method 1 - Lightning Fast)
+    if (apiKey && listId) {
+      console.log(`[YouTube API] Fetching playlist: ${listId}`);
+      
+      // Step A: Fetch Playlist Info
+      const plRes = await fetch(`https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${listId}&key=${apiKey}`);
+      const plData = await plRes.json();
+      if (!plData.items || plData.items.length === 0) {
+        return res.status(404).json({ success: false, message: "Playlist not found via API." });
+      }
+      const title = plData.items[0].snippet.title;
+      const channel = plData.items[0].snippet.channelTitle;
+
+      // Step B: Fetch Playlist Items (Handles Pagination)
+      let videoIds = [];
+      let nextPageToken = "";
+      do {
+        const pageRes = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=50&playlistId=${listId}&key=${apiKey}${nextPageToken ? `&pageToken=${nextPageToken}` : ''}`);
+        const pageData = await pageRes.json();
+        if (pageData.items) {
+          videoIds.push(...pageData.items.map(i => i.contentDetails.videoId));
+        }
+        nextPageToken = pageData.nextPageToken;
+      } while (nextPageToken);
+
+      // Step C: Fetch Video Durations in Batches of 50
+      let durations = [];
+      for (let i = 0; i < videoIds.length; i += 50) {
+        const batchIds = videoIds.slice(i, i + 50).join(",");
+        const vidRes = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${batchIds}&key=${apiKey}`);
+        const vidData = await vidRes.json();
+        if (vidData.items) {
+          const durMap = {};
+          vidData.items.forEach(v => {
+            durMap[v.id] = parseISO8601Duration(v.contentDetails.duration);
+          });
+          videoIds.slice(i, i + 50).forEach(id => {
+            durations.push(durMap[id] || 0);
+          });
+        }
+      }
+
+      const totalDuration = durations.reduce((a, b) => a + b, 0);
+      const data = {
+        title,
+        totalDuration,
+        videoCount: durations.length,
+        channel,
+        durations
+      };
+
+      cache.set(cacheKey, data);
+      return res.json({ success: true, data });
+    }
+
+    // 3. Fallback to yt-dlp (Slower scraper method)
+    console.log(`[Fallback] Fetching playlist with yt-dlp: ${playlistURL}`);
     const options = {
       dumpSingleJson: true,
       flatPlaylist: true,
@@ -451,16 +538,17 @@ app.get("/getPlaylistLength", async (req, res) => {
       }
     });
 
-    res.json({
-      success: true,
-      data: {
-        title: info.title || "Unknown Playlist",
-        totalDuration,
-        videoCount,
-        channel: info.uploader || "Unknown",
-        durations
-      }
-    });
+    const data = {
+      title: info.title || "Unknown Playlist",
+      totalDuration,
+      videoCount,
+      channel: info.uploader || "Unknown",
+      durations
+    };
+
+    cache.set(cacheKey, data);
+    res.json({ success: true, data });
+
   } catch (error) {
     console.error("Playlist error:", error);
     res.status(500).json({ success: false, message: "Failed to fetch playlist info." });
