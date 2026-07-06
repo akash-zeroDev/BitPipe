@@ -99,28 +99,37 @@ app.all("/downloadVideo", (req, res) => {
 
       if (isTrimming || isMerging) {
         delete options.output;
-        const tempFile = path.join(os.tmpdir(), crypto.randomUUID() + `.${fileExtension}`);
-        options.output = tempFile;
-
+        const tempDir = path.join(os.tmpdir(), crypto.randomUUID());
+        fs.mkdirSync(tempDir);
+        options.output = path.join(tempDir, 'video.%(ext)s');
+        
         const downloadProcess = ytdl.exec(videoURL, options);
         let errorLog = "";
         downloadProcess.stderr.on('data', (data) => { errorLog += data.toString(); });
 
         downloadProcess.on("close", (code) => {
+          let downloadedFile = null;
+          if (fs.existsSync(tempDir)) {
+            const files = fs.readdirSync(tempDir);
+            if (files.length > 0) downloadedFile = path.join(tempDir, files[0]);
+          }
+
           if (code !== 0 && !useCookies) {
+            if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
             console.log("Trim failed without cookies, trying with cookies...");
             startDownload(true);
-          } else if (code !== 0 || !fs.existsSync(tempFile)) {
+          } else if (code !== 0 || !downloadedFile) {
             console.error(`Trim process failed. Code: ${code}. Log: ${errorLog}`);
+            if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
             if (!res.headersSent) res.status(500).json({ success: false, message: "Trim failed." });
             else res.end();
           } else {
             if (isTrimming) {
-              const trimmedTempFile = tempFile + ".trimmed." + fileExtension;
-              execFile(ffmpegPath, ['-y', '-i', tempFile, '-ss', startTime.toString(), '-to', endTime.toString(), '-c', 'copy', trimmedTempFile], (err, stdout, stderr) => {
-                fs.unlink(tempFile, () => {});
+              const trimmedTempFile = path.join(tempDir, 'trimmed.mkv');
+              execFile(ffmpegPath, ['-y', '-i', downloadedFile, '-ss', startTime.toString(), '-to', endTime.toString(), '-c', 'copy', trimmedTempFile], (err, stdout, stderr) => {
                 if (err) {
                   console.error("FFMPEG Trim Error:", err, stderr);
+                  if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
                   if (!res.headersSent) res.status(500).json({ success: false, message: "Trim failed." });
                   else res.end();
                 } else {
@@ -130,8 +139,8 @@ app.all("/downloadVideo", (req, res) => {
                   }
                   const stream = fs.createReadStream(trimmedTempFile);
                   stream.pipe(res);
-                  stream.on('end', () => fs.unlink(trimmedTempFile, () => {}));
-                  stream.on('error', () => fs.unlink(trimmedTempFile, () => {}));
+                  stream.on('end', () => fs.rmSync(tempDir, { recursive: true, force: true }));
+                  stream.on('error', () => fs.rmSync(tempDir, { recursive: true, force: true }));
                 }
               });
             } else {
@@ -139,10 +148,10 @@ app.all("/downloadVideo", (req, res) => {
                 res.setHeader("Content-Disposition", `attachment; filename="${videoTitle}.${fileExtension}"`);
                 res.setHeader("Content-Type", `video/${fileExtension}`);
               }
-              const stream = fs.createReadStream(tempFile);
+              const stream = fs.createReadStream(downloadedFile);
               stream.pipe(res);
-              stream.on('end', () => fs.unlink(tempFile, () => {}));
-              stream.on('error', () => fs.unlink(tempFile, () => {}));
+              stream.on('end', () => fs.rmSync(tempDir, { recursive: true, force: true }));
+              stream.on('error', () => fs.rmSync(tempDir, { recursive: true, force: true }));
             }
           }
         });
@@ -305,36 +314,44 @@ app.post("/downloadBatch", async (req, res) => {
           await new Promise((resolve) => {
             if (isTrimming || isMerging) {
               delete options.output;
-              const tempFile = path.join(os.tmpdir(), crypto.randomUUID() + `.${finalExt}`);
-              options.output = tempFile;
+              const tempDir = path.join(os.tmpdir(), crypto.randomUUID());
+              fs.mkdirSync(tempDir);
+              options.output = path.join(tempDir, 'video.%(ext)s');
 
               const downloadProcess = ytdl.exec(item.videoURL, options);
               downloadProcess.on('close', (code) => {
-                if (code === 0 && fs.existsSync(tempFile)) {
+                let downloadedFile = null;
+                if (fs.existsSync(tempDir)) {
+                  const files = fs.readdirSync(tempDir);
+                  if (files.length > 0) downloadedFile = path.join(tempDir, files[0]);
+                }
+
+                if (code === 0 && downloadedFile) {
                   if (isTrimming) {
-                    const trimmedTempFile = tempFile + ".trimmed." + finalExt;
-                    execFile(ffmpegPath, ['-y', '-i', tempFile, '-ss', startTime.toString(), '-to', endTime.toString(), '-c', 'copy', trimmedTempFile], (err, stdout, stderr) => {
-                      fs.unlink(tempFile, () => {});
+                    const trimmedTempFile = path.join(tempDir, 'trimmed.mkv');
+                    execFile(ffmpegPath, ['-y', '-i', downloadedFile, '-ss', startTime.toString(), '-to', endTime.toString(), '-c', 'copy', trimmedTempFile], (err, stdout, stderr) => {
                       if (err) {
                         console.error(`Item ${i+1} trim failed:`, err, stderr);
+                        if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
                         resolve();
                       } else {
                         const stream = fs.createReadStream(trimmedTempFile);
                         archive.append(stream, { name: fileName });
-                        stream.on('end', () => { fs.unlink(trimmedTempFile, () => {}); resolve(); });
-                        stream.on('error', () => { fs.unlink(trimmedTempFile, () => {}); resolve(); });
+                        stream.on('end', () => { fs.rmSync(tempDir, { recursive: true, force: true }); resolve(); });
+                        stream.on('error', () => { fs.rmSync(tempDir, { recursive: true, force: true }); resolve(); });
                       }
                     });
                     return; // Wait for execFile to resolve
                   } else {
-                    const stream = fs.createReadStream(tempFile);
+                    const stream = fs.createReadStream(downloadedFile);
                     archive.append(stream, { name: fileName });
-                    stream.on('end', () => { fs.unlink(tempFile, () => {}); resolve(); });
-                    stream.on('error', () => { fs.unlink(tempFile, () => {}); resolve(); });
+                    stream.on('end', () => { fs.rmSync(tempDir, { recursive: true, force: true }); resolve(); });
+                    stream.on('error', () => { fs.rmSync(tempDir, { recursive: true, force: true }); resolve(); });
                     return; // Wait for stream to resolve
                   }
                 } else {
                   console.error(`Item ${i+1} download failed.`);
+                  if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
                   resolve();
                 }
               });
