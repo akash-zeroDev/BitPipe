@@ -413,10 +413,56 @@ app.post("/downloadBatch", async (req, res) => {
 
   } catch (error) {
     console.error("Batch POST failed:", error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, message: "Server error during zip processing." });
   }
 });
 
-app.listen(port, () => {
+app.get("/getPlaylistLength", async (req, res) => {
+  const { playlistURL } = req.query;
+  if (!playlistURL) {
+    return res.status(400).json({ success: false, message: "Missing playlist URL" });
+  }
+
+  try {
+    const options = {
+      dumpSingleJson: true,
+      flatPlaylist: true,
+      jsRuntimes: 'node',
+      cookies: 'cookies.txt'
+    };
+
+    const info = await ytdl(playlistURL, options);
+    
+    if (!info.entries || info.entries.length === 0) {
+      return res.status(404).json({ success: false, message: "No videos found in playlist." });
+    }
+
+    let totalDuration = 0;
+    let videoCount = 0;
+
+    info.entries.forEach(entry => {
+      if (entry.duration) {
+        totalDuration += entry.duration;
+        videoCount++;
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        title: info.title || "Unknown Playlist",
+        totalDuration,
+        videoCount,
+        channel: info.uploader || "Unknown"
+      }
+    });
+  } catch (error) {
+    console.error("Playlist error:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch playlist info." });
+  }
+});
+
+const PORT = 10000;
+app.listen(PORT, () => {
   console.log(`Example app listening on port http://localhost:${port}`);
 });

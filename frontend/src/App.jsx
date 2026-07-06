@@ -26,6 +26,13 @@ function App() {
   // Batch Queue State
   const [queue, setQueue] = useState([]);
   const [showQueue, setShowQueue] = useState(false);
+
+  // Playlist Calculator State
+  const [mode, setMode] = useState('downloader'); // 'downloader' | 'playlist'
+  const [playlistUrl, setPlaylistUrl] = useState('');
+  const [isPlaylistLoading, setIsPlaylistLoading] = useState(false);
+  const [playlistData, setPlaylistData] = useState(null);
+  const [playlistError, setPlaylistError] = useState(false);
   const [jobId, setJobId] = useState(null);
   const [batchStatus, setBatchStatus] = useState(null); // 'processing', 'completed', 'error'
   const [batchProgress, setBatchProgress] = useState(0);
@@ -256,6 +263,37 @@ function App() {
     }
   };
 
+  const handlePlaylistSubmit = async () => {
+    if (!playlistUrl) return;
+    setIsPlaylistLoading(true);
+    setPlaylistError(false);
+    setPlaylistData(null);
+    try {
+      const res = await axios.get(`${apiUrl}/getPlaylistLength?playlistURL=${encodeURIComponent(playlistUrl)}`);
+      if (res.data.success) {
+        setPlaylistData(res.data.data);
+      } else {
+        setPlaylistError(true);
+      }
+    } catch (err) {
+      console.error(err);
+      setPlaylistError(true);
+    } finally {
+      setIsPlaylistLoading(false);
+    }
+  };
+
+  const formatDuration = (totalSeconds) => {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    const parts = [];
+    if (h > 0) parts.push(`${h}h`);
+    if (m > 0 || h > 0) parts.push(`${m}m`);
+    parts.push(`${s}s`);
+    return parts.join(' ');
+  };
+
   return (
     <>
       {/* Floating Queue Button */}
@@ -334,10 +372,29 @@ function App() {
       )}
 
       <div className="min-h-screen w-full bg-gradient-to-br from-blue-400 to-pink-300 flex items-center justify-center p-4">
-        <div className="bg-white/20 w-full md:w-3/4 h-auto md:h-3/4 backdrop-blur-lg rounded-2xl border border-white/30 shadow-lg p-4 md:p-6">
-          <h1 className="text-white text-3xl md:text-5xl text-center md:text-left font-bold mt-4">
-            Your Videos, Offline Anytime
-          </h1>
+        <div className="bg-white/20 w-full md:w-3/4 h-auto md:h-3/4 backdrop-blur-lg rounded-2xl border border-white/30 shadow-lg p-4 md:p-6 flex flex-col">
+          
+          {/* Mode Toggle */}
+          <div className="flex bg-white/30 rounded-full p-1 w-full max-w-md mx-auto mb-6">
+            <button 
+              onClick={() => setMode('downloader')}
+              className={`flex-1 py-2 rounded-full font-bold text-sm transition ${mode === 'downloader' ? 'bg-white text-indigo-600 shadow-sm' : 'text-white hover:bg-white/20'}`}
+            >
+              Downloader
+            </button>
+            <button 
+              onClick={() => setMode('playlist')}
+              className={`flex-1 py-2 rounded-full font-bold text-sm transition ${mode === 'playlist' ? 'bg-white text-pink-600 shadow-sm' : 'text-white hover:bg-white/20'}`}
+            >
+              Playlist Calculator
+            </button>
+          </div>
+
+          {mode === 'downloader' ? (
+            <>
+              <h1 className="text-white text-3xl md:text-5xl text-center md:text-left font-bold mt-4">
+                Your Videos, Offline Anytime
+              </h1>
 
           <div className="flex flex-col md:flex-row items-center md:items-start gap-4 mt-6 md:mt-10">
             <input
@@ -538,6 +595,61 @@ function App() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+            </>
+          ) : (
+            <div className="flex flex-col items-center mt-4 pb-10">
+              <h1 className="text-white text-3xl md:text-5xl text-center font-bold mb-2">
+                Playlist Length Calculator
+              </h1>
+              <p className="text-white/90 text-center mb-8 font-medium">
+                Find out exactly how long it takes to binge your favorite playlist!
+              </p>
+
+              <div className="flex flex-col md:flex-row items-center justify-center gap-4 w-full max-w-2xl">
+                <input
+                  type="text"
+                  placeholder="Paste YouTube Playlist URL..."
+                  className="bg-white p-4 rounded-full w-full block border-0 focus:outline-0 text-gray-700 shadow-inner"
+                  onChange={(e) => setPlaylistUrl(e.target.value.trim())}
+                  value={playlistUrl}
+                  onKeyDown={(e) => e.key === 'Enter' && handlePlaylistSubmit()}
+                />
+                <button
+                  className="rounded-full p-4 px-8 bg-pink-500 font-bold cursor-pointer text-white text-center w-full md:w-auto hover:bg-pink-600 transition shadow-lg whitespace-nowrap"
+                  onClick={handlePlaylistSubmit}
+                >
+                  {isPlaylistLoading ? "Calculating..." : "Calculate"}
+                </button>
+              </div>
+
+              {playlistError && (
+                <p className="text-red-600 bg-red-100/80 px-4 py-2 rounded-lg font-bold mt-6">
+                  Failed to fetch playlist info. Is the playlist public?
+                </p>
+              )}
+
+              {playlistData && (
+                <div className="mt-8 bg-white/60 backdrop-blur-md rounded-2xl p-6 md:p-10 w-full max-w-2xl border border-white/40 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  <div className="flex flex-col gap-2 items-center text-center">
+                    <span className="bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">Results</span>
+                    <h2 className="text-2xl font-bold text-gray-800 line-clamp-2">{playlistData.title}</h2>
+                    <p className="text-gray-500 font-medium">by {playlistData.channel}</p>
+                    
+                    <div className="grid grid-cols-2 gap-4 w-full mt-6">
+                      <div className="bg-white/80 rounded-xl p-4 flex flex-col items-center shadow-sm">
+                        <span className="text-3xl font-extrabold text-indigo-600">{playlistData.videoCount}</span>
+                        <span className="text-xs text-gray-500 font-bold uppercase mt-1">Videos</span>
+                      </div>
+                      <div className="bg-white/80 rounded-xl p-4 flex flex-col items-center shadow-sm">
+                        <span className="text-3xl font-extrabold text-pink-600">{formatDuration(playlistData.totalDuration)}</span>
+                        <span className="text-xs text-gray-500 font-bold uppercase mt-1">Total Time</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
