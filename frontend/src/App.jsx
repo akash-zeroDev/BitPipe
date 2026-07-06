@@ -464,127 +464,47 @@ function App() {
           )}
 
           {detail && (
-            <div className="mt-10 bg-gray-900 border border-gray-800 rounded-3xl p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8 shadow-inner">
-              {/* Thumbnail & Title */}
+            <div className="mt-10 bg-gray-900 border border-gray-800 rounded-3xl p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8 shadow-sm">
+              
+              {/* Left Column: Media Summary */}
               <div className="flex flex-col gap-4">
                 <img
                   src={data?.data?.thumbnail}
                   className="w-full aspect-video object-cover rounded-2xl shadow-lg border border-gray-800"
                   alt="thumbnail"
                 />
-                <h1 className="text-xl md:text-2xl font-bold text-white line-clamp-2 leading-tight">
-                  {data?.data?.title}
-                </h1>
+                <div className="flex flex-col">
+                  <h1 className="text-xl md:text-2xl font-bold text-white line-clamp-2 leading-tight">
+                    {data?.data?.title}
+                  </h1>
+                  <p className="text-gray-500 font-medium mt-1">
+                    {data?.data?.channel || "Unknown Channel"}
+                  </p>
+                </div>
               </div>
 
-              {/* Download Controls */}
-              <div className="flex flex-col gap-4 justify-center">
+              {/* Right Column: Controls */}
+              <div className="flex flex-col justify-between gap-6">
                 
-                {/* Default Download Buttons */}
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => handleDownload(true, false)}
-                    className="flex-1 bg-white hover:bg-gray-200 text-black font-bold py-4 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg"
-                  >
-                    <Download size={20} /> Download Highest Quality
-                  </button>
-                  <button 
-                    onClick={() => handleDownload(true, true)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition shadow-lg"
-                  >
-                    <Archive size={20} /> Add to Queue
-                  </button>
-                </div>
-
-                {/* Trimming Toggle */}
-                <button 
-                  onClick={() => setIsTrimming(!isTrimming)}
-                  className="mt-4 text-gray-400 font-medium flex items-center justify-center gap-2 hover:text-white transition"
-                >
-                  <Scissors size={18} />
-                  {isTrimming ? "Disable Trimming" : "Trim Video Snippet"}
-                </button>
-
-                {isTrimming && (
-                  <div className="mt-4 p-5 bg-gray-950 rounded-xl border border-gray-800 flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
-                    <div className="flex justify-between items-center mb-2">
-                      <input 
-                        className="font-bold text-white bg-gray-900 px-3 py-2 rounded-lg shadow-inner border border-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-600 w-24 text-center"
-                        value={startInput}
-                        onChange={(e) => setStartInput(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
-                        onBlur={() => {
-                          const s = parseTime(startInput);
-                          setStartTime(s);
-                          setStartInput(formatTime(s));
-                        }}
-                      />
-                      <input 
-                        className="font-bold text-gray-700 bg-white px-3 py-1 rounded-lg shadow-sm border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-24 text-center"
-                        value={endInput}
-                        onChange={(e) => setEndInput(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
-                        onBlur={() => {
-                          const eTime = parseTime(endInput);
-                          setEndTime(eTime);
-                          setEndInput(formatTime(eTime));
-                        }}
-                      />
-                    </div>
-                    
-                    <div className="px-2 pb-2">
-                      <Slider 
-                        range 
-                        min={0} 
-                        max={data?.data?.duration || 100} 
-                        value={[startTime, endTime]} 
-                        onChange={(val) => { 
-                          setStartTime(val[0]); 
-                          setEndTime(val[1]); 
-                          setStartInput(formatTime(val[0]));
-                          setEndInput(formatTime(val[1]));
-                        }} 
-                        styles={{
-                          track: { backgroundColor: '#4f46e5', height: 8 },
-                          handle: { borderColor: '#4f46e5', height: 20, width: 20, marginTop: -6, backgroundColor: '#fff', opacity: 1, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' },
-                          rail: { backgroundColor: '#e5e7eb', height: 8 }
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Advanced Settings Toggle */}
-                <button 
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="mt-2 text-gray-700 font-semibold flex items-center justify-center gap-2 hover:text-indigo-800 transition"
-                >
-                  <Settings size={18} />
-                  {showAdvanced ? "Hide Advanced Settings" : "Custom Mix / Advanced Settings"}
-                  {showAdvanced ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </button>
-
-                {/* Advanced Settings Panel */}
-                {showAdvanced && (
-                  <div className="mt-4 p-5 bg-gray-950 rounded-xl border border-gray-800 flex flex-col gap-5 animate-in fade-in slide-in-from-top-4 duration-300">
-                    
-                    {/* Video Row */}
+                <div className="flex flex-col gap-5">
+                  {/* Format Selectors Grid */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Video Column */}
                     <div className="flex flex-col gap-2">
-                      <button 
-                        onClick={() => setIncludeVideo(!includeVideo)}
-                        className={`w-full flex items-center justify-between p-3.5 rounded-xl font-bold transition border ${includeVideo ? 'bg-gray-800 text-white border-gray-700' : 'bg-gray-900 text-gray-500 border-gray-800 hover:bg-gray-800'}`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Video size={20} />
-                          {includeVideo ? "Video Enabled" : "Video Disabled (Click to Enable)"}
-                        </div>
-                        {includeVideo ? <Check size={20} className="text-green-600" /> : <X size={20} className="text-red-500" />}
-                      </button>
+                      <label className="flex items-center gap-2 cursor-pointer group">
+                        <input 
+                          type="checkbox" 
+                          checked={includeVideo} 
+                          onChange={() => setIncludeVideo(!includeVideo)}
+                          className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-gray-900 transition"
+                        />
+                        <span className="text-sm font-semibold text-gray-300 group-hover:text-white transition">Video Format</span>
+                      </label>
                       <select 
                         disabled={!includeVideo}
                         value={selectedVideo}
                         onChange={(e) => setSelectedVideo(e.target.value)}
-                        className="w-full p-3.5 rounded-xl border border-gray-800 bg-gray-900 text-white focus:outline-none focus:border-gray-600 disabled:opacity-50 disabled:bg-gray-950"
+                        className="w-full p-2.5 text-sm rounded-xl border border-gray-800 bg-gray-950 text-white focus:outline-none focus:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
                       >
                         {videoFormats.map(v => (
                           <option key={v.format_id} value={v.format_id}>
@@ -594,50 +514,111 @@ function App() {
                       </select>
                     </div>
 
-                    {/* Audio Row */}
+                    {/* Audio Column */}
                     <div className="flex flex-col gap-2">
-                      <button 
-                        onClick={() => setIncludeAudio(!includeAudio)}
-                        className={`w-full flex items-center justify-between p-3.5 rounded-xl font-bold transition border ${includeAudio ? 'bg-gray-800 text-white border-gray-700' : 'bg-gray-900 text-gray-500 border-gray-800 hover:bg-gray-800'}`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Headphones size={20} />
-                          {includeAudio ? "Audio Enabled" : "Audio Disabled (Click to Enable)"}
-                        </div>
-                        {includeAudio ? <Check size={20} className="text-green-600" /> : <X size={20} className="text-red-500" />}
-                      </button>
+                      <label className="flex items-center gap-2 cursor-pointer group">
+                        <input 
+                          type="checkbox" 
+                          checked={includeAudio} 
+                          onChange={() => setIncludeAudio(!includeAudio)}
+                          className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-indigo-600 focus:ring-indigo-600 focus:ring-offset-gray-900 transition"
+                        />
+                        <span className="text-sm font-semibold text-gray-300 group-hover:text-white transition">Audio Format</span>
+                      </label>
                       <select 
                         disabled={!includeAudio}
                         value={selectedAudio}
                         onChange={(e) => setSelectedAudio(e.target.value)}
-                        className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-gray-100 bg-white"
+                        className="w-full p-2.5 text-sm rounded-xl border border-gray-800 bg-gray-950 text-white focus:outline-none focus:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
                       >
                         {audioFormats.map(a => (
                           <option key={a.format_id} value={a.format_id}>
-                            Audio Only - {a.ext}
+                            {a.ext} Only
                           </option>
                         ))}
                       </select>
                     </div>
-
-                    <div className="flex gap-3 mt-2">
-                      <button 
-                        onClick={() => handleDownload(false, false)}
-                        className="flex-1 bg-white hover:bg-gray-200 text-black font-bold py-4 px-4 rounded-xl flex items-center justify-center gap-2 transition"
-                      >
-                        <Download size={20} />
-                        Download {includeVideo && includeAudio ? "Combined" : includeVideo ? "Video" : "Audio"}
-                      </button>
-                      <button 
-                        onClick={() => handleDownload(false, true)}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-4 rounded-xl flex items-center justify-center gap-2 transition"
-                      >
-                        <Archive size={20} />
-                        Add to Queue
-                      </button>
-                    </div>
                   </div>
-                )}
+
+                  {/* Trimmer Toggle */}
+                  <div className="flex flex-col border-t border-gray-800 pt-4 mt-2">
+                    <button 
+                      onClick={() => setIsTrimming(!isTrimming)}
+                      className="text-gray-400 font-medium flex items-center gap-2 hover:text-white transition self-start text-sm"
+                    >
+                      <Scissors size={16} />
+                      {isTrimming ? "Disable Trimming" : "✂️ Trim Video"}
+                    </button>
+
+                    {isTrimming && (
+                      <div className="mt-4 p-4 bg-gray-950 rounded-xl border border-gray-800 flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="flex justify-between items-center mb-1">
+                          <input 
+                            className="font-mono text-xs font-semibold text-white bg-gray-900 px-2 py-1 rounded-md border border-gray-800 focus:outline-none focus:border-gray-600 w-16 text-center"
+                            value={startInput}
+                            onChange={(e) => setStartInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                            onBlur={() => {
+                              const s = parseTime(startInput);
+                              setStartTime(s);
+                              setStartInput(formatTime(s));
+                            }}
+                          />
+                          <input 
+                            className="font-mono text-xs font-semibold text-white bg-gray-900 px-2 py-1 rounded-md border border-gray-800 focus:outline-none focus:border-gray-600 w-16 text-center"
+                            value={endInput}
+                            onChange={(e) => setEndInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                            onBlur={() => {
+                              const eTime = parseTime(endInput);
+                              setEndTime(eTime);
+                              setEndInput(formatTime(eTime));
+                            }}
+                          />
+                        </div>
+                        
+                        <div className="px-1">
+                          <Slider 
+                            range 
+                            min={0} 
+                            max={data?.data?.duration || 100} 
+                            value={[startTime, endTime]} 
+                            onChange={(val) => { 
+                              setStartTime(val[0]); 
+                              setEndTime(val[1]); 
+                              setStartInput(formatTime(val[0]));
+                              setEndInput(formatTime(val[1]));
+                            }} 
+                            styles={{
+                              track: { backgroundColor: '#4f46e5', height: 4 },
+                              handle: { borderColor: '#4f46e5', height: 14, width: 14, marginTop: -5, backgroundColor: '#fff', opacity: 1, boxShadow: '0 1px 3px rgba(0,0,0,0.3)' },
+                              rail: { backgroundColor: '#374151', height: 4 }
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Unified Action Buttons */}
+                <div className="flex flex-col gap-3 mt-4">
+                  <button 
+                    onClick={() => handleDownload(false, false)}
+                    className="w-full bg-white hover:bg-gray-200 text-black font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-sm"
+                  >
+                    <Download size={20} />
+                    Download {includeVideo && includeAudio ? "Combined" : includeVideo ? "Video" : includeAudio ? "Audio" : "Nothing Selected"}
+                  </button>
+                  <button 
+                    onClick={() => handleDownload(false, true)}
+                    className="w-full bg-transparent hover:bg-gray-800 text-white border border-gray-700 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition"
+                  >
+                    <Archive size={18} />
+                    Add to Queue
+                  </button>
+                </div>
+
               </div>
             </div>
           )}
