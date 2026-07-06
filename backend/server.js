@@ -103,7 +103,7 @@ app.all("/downloadVideo", (req, res) => {
 
       console.log(`Starting yt-dlp with options:`, options);
 
-      if (isTrimming) {
+      if (isTrimming || isMerging) {
         delete options.output;
         const tempFile = path.join(os.tmpdir(), crypto.randomUUID() + `.${fileExtension}`);
         options.output = tempFile;
@@ -295,7 +295,7 @@ app.post("/downloadBatch", async (req, res) => {
           console.log(`Zipping item ${i+1}:`, item.videoURL);
           
           await new Promise((resolve) => {
-            if (isTrimming) {
+            if (isTrimming || isMerging) {
               delete options.output;
               const tempFile = path.join(os.tmpdir(), crypto.randomUUID() + `.${finalExt}`);
               options.output = tempFile;
