@@ -440,21 +440,21 @@ function App() {
 
               <div className="bg-[#0A0A0B] rounded-3xl border border-gray-800 shadow-2xl p-6 md:p-8 w-full flex flex-col">
 
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-4">
+          <div className="flex flex-col md:flex-row bg-gray-900 rounded-xl border border-gray-800 p-1.5 focus-within:ring-1 focus-within:ring-gray-600 focus-within:border-gray-600 transition w-full shadow-inner gap-2 md:gap-0">
             <input
               type="text"
               placeholder="Enter Video URL here..."
-              className="bg-gray-900 text-white placeholder-gray-500 p-4 px-6 rounded-full w-full md:w-2/3 block border border-gray-800 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 transition"
+              className="bg-transparent text-white placeholder-gray-500 p-3 px-4 w-full focus:outline-none"
               onChange={(e) => setUrl(e.target.value.trim())}
               value={url}
               onKeyDown={handleSubmit}
             />
-            <div
-              className="rounded-full p-4 px-8 bg-white cursor-pointer text-black font-bold text-center w-full md:w-auto hover:bg-gray-200 transition"
+            <button
+              className="rounded-lg p-3 md:px-8 bg-white text-gray-950 font-semibold hover:bg-gray-200 transition whitespace-nowrap w-full md:w-auto"
               onClick={handleSubmit}
             >
               {isLoading ? "Fetching..." : "Fetch Video"}
-            </div>
+            </button>
           </div>
           
           {error && (
@@ -653,17 +653,17 @@ function App() {
               </p>
 
               <div className="bg-[#0A0A0B] rounded-3xl border border-gray-800 shadow-2xl p-6 md:p-8 w-full flex flex-col items-center">
-              <div className="flex flex-col md:flex-row items-center justify-center gap-4 w-full">
+              <div className="flex flex-col md:flex-row bg-gray-900 rounded-xl border border-gray-800 p-1.5 focus-within:ring-1 focus-within:ring-gray-600 focus-within:border-gray-600 transition w-full shadow-inner gap-2 md:gap-0">
                 <input
                   type="text"
                   placeholder="Paste YouTube Playlist URL..."
-                  className="bg-gray-900 text-white placeholder-gray-500 p-4 px-6 rounded-full w-full block border border-gray-800 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 transition shadow-inner"
+                  className="bg-transparent text-white placeholder-gray-500 p-3 px-4 w-full focus:outline-none"
                   onChange={(e) => setPlaylistUrl(e.target.value.trim())}
                   value={playlistUrl}
                   onKeyDown={(e) => e.key === 'Enter' && handlePlaylistSubmit()}
                 />
                 <button
-                  className="rounded-full p-4 px-8 bg-white font-bold cursor-pointer text-black text-center w-full md:w-auto hover:bg-gray-200 transition shadow-lg whitespace-nowrap"
+                  className="rounded-lg p-3 md:px-8 bg-white text-gray-950 font-semibold hover:bg-gray-200 transition whitespace-nowrap shadow-sm w-full md:w-auto"
                   onClick={handlePlaylistSubmit}
                 >
                   {isPlaylistLoading ? "Calculating..." : "Calculate"}
