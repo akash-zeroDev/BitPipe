@@ -262,7 +262,17 @@ function App() {
       const query = new URLSearchParams(queryParams).toString();
       
       setIsDownloading(true);
-      setTimeout(() => setIsDownloading(false), 5000); // Reset after 5s
+      
+      // UX Trick: We can't detect when the file officially starts downloading via location.href.
+      // So we use a long 25-second fallback, AND clear it instantly if the user focuses the window
+      // (which happens right after dismissing the native browser "Save As..." popup).
+      const resetDownload = () => {
+        setIsDownloading(false);
+        window.removeEventListener('focus', resetDownload);
+      };
+      
+      window.addEventListener('focus', resetDownload);
+      setTimeout(resetDownload, 25000); 
 
       window.location.href = `${apiUrl}/downloadVideo?${query}`;
     } catch (err) {
