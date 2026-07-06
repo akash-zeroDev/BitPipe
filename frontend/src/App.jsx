@@ -327,20 +327,28 @@ function App() {
   };
 
   return (
-    <>
-      {/* Floating Queue Button */}
-      <button 
-        onClick={() => setShowQueue(true)}
-        className="fixed top-6 right-6 bg-white/30 backdrop-blur-md border border-white/50 text-white p-3 rounded-full shadow-lg hover:bg-white/40 transition flex items-center gap-2 z-40"
-      >
-        <Archive size={24} />
-        {queue.length > 0 && (
-          <span className="bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-            {queue.length}
-          </span>
-        )}
-      </button>
-
+    <div className="min-h-screen bg-[#F9FAFB] flex flex-col font-sans">
+      {/* Header */}
+      <header className="h-16 border-b border-gray-200 bg-white px-4 md:px-6 flex justify-between items-center sticky top-0 z-40 shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className="bg-black text-white p-1.5 rounded-lg">
+            <Download size={20} />
+          </div>
+          <h1 className="text-xl font-extrabold tracking-tight text-gray-900">BitPipe</h1>
+        </div>
+        <button 
+          onClick={() => setShowQueue(true)}
+          className="relative flex items-center gap-2 text-gray-600 hover:text-black transition p-2 hover:bg-gray-100 rounded-full"
+        >
+          <Archive size={22} />
+          {queue.length > 0 && (
+            <span className="absolute top-0 right-0 bg-indigo-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">
+              {queue.length}
+            </span>
+          )}
+        </button>
+      </header>
+      
       {/* Queue Drawer Modal */}
       {showQueue && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-end z-50">
@@ -403,20 +411,19 @@ function App() {
         </div>
       )}
 
-      <div className="min-h-screen w-full bg-[#F9FAFB] flex items-center justify-center p-4">
-        <div className="bg-[#0A0A0B] w-full md:w-3/4 h-auto md:h-3/4 rounded-[2rem] border border-gray-800 shadow-2xl p-6 md:p-10 flex flex-col">
+      <main className="flex-1 w-full max-w-3xl mx-auto mt-8 md:mt-12 px-4 pb-20 flex flex-col">
           
           {/* Mode Toggle */}
-          <div className="flex bg-gray-900 border border-gray-800 rounded-full p-1.5 w-full max-w-md mx-auto mb-8 shadow-inner">
+          <div className="flex bg-gray-200/60 border border-gray-200 rounded-lg p-1 w-full max-w-[280px] mx-auto mb-10 shadow-sm">
             <button 
               onClick={() => setMode('downloader')}
-              className={`flex-1 py-2.5 rounded-full font-bold text-sm transition-all duration-200 ${mode === 'downloader' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              className={`flex-1 py-1.5 rounded-md font-semibold text-sm transition-all duration-200 ${mode === 'downloader' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
             >
               Downloader
             </button>
             <button 
               onClick={() => setMode('playlist')}
-              className={`flex-1 py-2.5 rounded-full font-bold text-sm transition-all duration-200 ${mode === 'playlist' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              className={`flex-1 py-1.5 rounded-md font-semibold text-sm transition-all duration-200 ${mode === 'playlist' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
             >
               Playlist Calculator
             </button>
@@ -424,11 +431,16 @@ function App() {
 
           {mode === 'downloader' ? (
             <>
-              <h1 className="text-white text-4xl md:text-6xl text-center md:text-left font-extrabold tracking-tight mt-2">
-                Your Videos, <span className="text-gray-400">Offline Anytime.</span>
-              </h1>
+              <div className="flex flex-col items-center mb-10">
+                <h1 className="text-gray-900 text-4xl md:text-5xl text-center font-extrabold tracking-tight mt-2">
+                  Your Videos, <span className="text-gray-400">Offline.</span>
+                </h1>
+                <p className="text-gray-500 mt-3 text-center">Fast, clean, and reliable batch downloading.</p>
+              </div>
 
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-4 mt-8 md:mt-12">
+              <div className="bg-[#0A0A0B] rounded-3xl border border-gray-800 shadow-2xl p-6 md:p-8 w-full flex flex-col">
+
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-4">
             <input
               type="text"
               placeholder="Enter Video URL here..."
@@ -629,17 +641,19 @@ function App() {
               </div>
             </div>
           )}
+          </div>
             </>
           ) : (
-            <div className="flex flex-col items-center mt-4 pb-10">
-              <h1 className="text-white text-4xl md:text-6xl text-center font-extrabold tracking-tight mt-2 mb-4">
+            <div className="flex flex-col items-center pb-10 w-full">
+              <h1 className="text-gray-900 text-4xl md:text-5xl text-center font-extrabold tracking-tight mt-2 mb-3">
                 Playlist <span className="text-gray-400">Calculator.</span>
               </h1>
-              <p className="text-gray-400 text-center mb-10 text-lg">
-                Find out exactly how long it takes to binge your favorite playlist!
+              <p className="text-gray-500 text-center mb-10">
+                Find out exactly how long it takes to binge your favorite playlist.
               </p>
 
-              <div className="flex flex-col md:flex-row items-center justify-center gap-4 w-full max-w-2xl">
+              <div className="bg-[#0A0A0B] rounded-3xl border border-gray-800 shadow-2xl p-6 md:p-8 w-full flex flex-col items-center">
+              <div className="flex flex-col md:flex-row items-center justify-center gap-4 w-full">
                 <input
                   type="text"
                   placeholder="Paste YouTube Playlist URL..."
@@ -706,10 +720,10 @@ function App() {
                 </div>
               )}
             </div>
+          </div>
           )}
-        </div>
+        </main>
       </div>
-    </>
   );
 }
 
