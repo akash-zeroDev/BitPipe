@@ -3,6 +3,42 @@ import { Download, Settings, Video, Headphones, ChevronDown, ChevronUp, Check, X
 import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
 
+const CustomDropdown = ({ options, value, onChange, disabled }) => {
+  const [open, setOpen] = useState(false);
+  const selectedOption = options.find(o => o.value.toString() === value?.toString()) || options[0];
+
+  return (
+    <div className="relative w-full">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between p-2.5 text-sm rounded-xl border border-gray-800 bg-gray-950 text-white focus:outline-none focus:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
+      >
+        <span className="truncate pr-2">{selectedOption ? selectedOption.label : 'Select...'}</span>
+        <ChevronDown size={16} className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      
+      {open && !disabled && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 right-0 z-50 mt-2 max-h-60 overflow-y-auto bg-gray-950 border border-gray-800 rounded-xl shadow-2xl py-1 custom-scrollbar">
+            {options.map((opt) => (
+              <div
+                key={opt.value}
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+                className={`px-3 py-2.5 text-sm cursor-pointer hover:bg-gray-800 transition ${opt.value.toString() === value?.toString() ? 'text-indigo-400 font-medium bg-gray-900/50' : 'text-gray-300'}`}
+              >
+                {opt.label}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 function App() {
   const [url, setUrl] = useState("");
   const [detail, setDetail] = useState(false);
@@ -524,18 +560,12 @@ function App() {
                         />
                         <span className="text-sm font-semibold text-gray-300 group-hover:text-white transition">Video Format</span>
                       </label>
-                      <select 
+                      <CustomDropdown
                         disabled={!includeVideo}
                         value={selectedVideo}
-                        onChange={(e) => setSelectedVideo(e.target.value)}
-                        className="w-full p-2.5 text-sm rounded-xl border border-gray-800 bg-gray-950 text-white focus:outline-none focus:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                      >
-                        {videoFormats.map(v => (
-                          <option key={v.format_id} value={v.format_id}>
-                            {v.format_note} ({v.ext})
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(val) => setSelectedVideo(val)}
+                        options={videoFormats.map(v => ({ value: v.format_id, label: `${v.format_note} (${v.ext})` }))}
+                      />
                     </div>
 
                     {/* Audio Column */}
@@ -549,18 +579,12 @@ function App() {
                         />
                         <span className="text-sm font-semibold text-gray-300 group-hover:text-white transition">Audio Format</span>
                       </label>
-                      <select 
+                      <CustomDropdown
                         disabled={!includeAudio}
                         value={selectedAudio}
-                        onChange={(e) => setSelectedAudio(e.target.value)}
-                        className="w-full p-2.5 text-sm rounded-xl border border-gray-800 bg-gray-950 text-white focus:outline-none focus:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                      >
-                        {audioFormats.map(a => (
-                          <option key={a.format_id} value={a.format_id}>
-                            {a.ext} Only
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(val) => setSelectedAudio(val)}
+                        options={audioFormats.map(a => ({ value: a.format_id, label: `${a.ext} Only` }))}
+                      />
                     </div>
                   </div>
 
@@ -722,14 +746,18 @@ function App() {
                       </div>
                       <div className="flex flex-col text-left">
                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5 ml-1">Speed</label>
-                        <select className="bg-gray-950 text-white p-2.5 rounded-xl border border-gray-800 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 w-full text-sm transition" value={playbackSpeed} onChange={(e) => setPlaybackSpeed(e.target.value)}>
-                          <option value="0.5">0.5x</option>
-                          <option value="1">1x (Normal)</option>
-                          <option value="1.25">1.25x</option>
-                          <option value="1.5">1.5x</option>
-                          <option value="1.75">1.75x</option>
-                          <option value="2">2x</option>
-                        </select>
+                        <CustomDropdown
+                          value={playbackSpeed}
+                          onChange={(val) => setPlaybackSpeed(val)}
+                          options={[
+                            { value: '0.5', label: '0.5x' },
+                            { value: '1', label: '1x (Normal)' },
+                            { value: '1.25', label: '1.25x' },
+                            { value: '1.5', label: '1.5x' },
+                            { value: '1.75', label: '1.75x' },
+                            { value: '2', label: '2x' }
+                          ]}
+                        />
                       </div>
                     </div>
 
