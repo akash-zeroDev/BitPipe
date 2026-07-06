@@ -68,9 +68,11 @@ app.post("/getVideoInfo", async (req, res) => {
       data: info,
     });
   } catch (error) {
-    res.status(500);
-    console.log(error);
-    res.send(error);
+    console.error("Video Info Fetch Error:", error.message || error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch video info. It might be age-restricted or unavailable." 
+    });
   }
 });
 
