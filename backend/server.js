@@ -125,7 +125,7 @@ app.all("/downloadVideo", (req, res) => {
             else res.end();
           } else {
             if (isTrimming) {
-              const trimmedTempFile = path.join(tempDir, 'trimmed.mkv');
+              const trimmedTempFile = path.join(tempDir, 'trimmed.' + fileExtension);
               execFile(ffmpegPath, ['-y', '-i', downloadedFile, '-ss', startTime.toString(), '-to', endTime.toString(), '-c', 'copy', trimmedTempFile], (err, stdout, stderr) => {
                 if (err) {
                   console.error("FFMPEG Trim Error:", err, stderr);
@@ -139,8 +139,8 @@ app.all("/downloadVideo", (req, res) => {
                   }
                   const stream = fs.createReadStream(trimmedTempFile);
                   stream.pipe(res);
-                  stream.on('end', () => fs.rmSync(tempDir, { recursive: true, force: true }));
-                  stream.on('error', () => fs.rmSync(tempDir, { recursive: true, force: true }));
+                  stream.on('end', () => { if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true }); });
+                  stream.on('error', () => { if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true }); });
                 }
               });
             } else {
@@ -291,93 +291,107 @@ app.post("/downloadBatch", async (req, res) => {
           const isMerging = formatId.includes('+');
           const isTrimming = startTime !== undefined && endTime !== undefined;
 
-          const options = {
-            format: formatId,
-            output: '-',
-            jsRuntimes: 'node',
-            httpChunkSize: '10M',
-            cookies: 'cookies.txt'
-          };
-
-          if (isMerging || isTrimming) {
-            options.ffmpegLocation = ffmpegPath;
-            if (isMerging) options.mergeOutputFormat = 'mkv';
-          }
-          
           let finalExt = item.ext;
-          if (isTrimming || isMerging) finalExt = 'mkv';
+          if (isMerging) finalExt = 'mkv';
           
           const safeTitle = (item.title || "Video").replace(/[/\\?%*:|"<>]/g, '-');
           const fileName = `${safeTitle}_${i+1}.${finalExt}`;
           
           console.log(`Zipping item ${i+1}:`, item.videoURL);
           
-          await new Promise((resolve) => {
-            if (isTrimming || isMerging) {
-              delete options.output;
-              const tempDir = path.join(os.tmpdir(), crypto.randomUUID());
-              fs.mkdirSync(tempDir);
-              options.output = path.join(tempDir, 'video.%(ext)s');
+          let tempDir = null;
+          
+          try {
+            await new Promise((resolve) => {
+              const options = {
+                format: formatId,
+                jsRuntimes: 'node',
+                httpChunkSize: '10M',
+                cookies: 'cookies.txt'
+              };
 
-              const downloadProcess = ytdl.exec(item.videoURL, options);
-              let ytdlErrorLog = "";
-              downloadProcess.stderr.on('data', d => { ytdlErrorLog += d.toString(); });
-              
-              downloadProcess.on('close', (code) => {
-                let downloadedFile = null;
-                if (fs.existsSync(tempDir)) {
-                  const files = fs.readdirSync(tempDir);
-                  console.log(`[Batch Item ${i+1}] tempDir contents after download:`, files);
-                  if (files.length > 0) downloadedFile = path.join(tempDir, files[0]);
-                }
+              if (isMerging || isTrimming) {
+                options.ffmpegLocation = ffmpegPath;
+                if (isMerging) options.mergeOutputFormat = 'mkv';
 
-                if (code === 0 && downloadedFile) {
-                  if (isTrimming) {
-                    const trimmedTempFile = path.join(tempDir, 'trimmed.mkv');
-                    execFile(ffmpegPath, ['-y', '-i', downloadedFile, '-ss', startTime.toString(), '-to', endTime.toString(), '-c', 'copy', trimmedTempFile], (err, stdout, stderr) => {
-                      if (err) {
-                        console.error(`Item ${i+1} trim failed:`, err, stderr);
-                        if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
-                        resolve();
+                tempDir = path.join(os.tmpdir(), crypto.randomUUID());
+                fs.mkdirSync(tempDir);
+                options.output = path.join(tempDir, 'video.%(ext)s');
+
+                const downloadProcess = ytdl.exec(item.videoURL, options);
+                let ytdlErrorLog = "";
+                downloadProcess.stderr.on('data', d => { ytdlErrorLog += d.toString(); });
+                
+                downloadProcess.on('close', (code) => {
+                  try {
+                    let downloadedFile = null;
+                    if (fs.existsSync(tempDir)) {
+                      const files = fs.readdirSync(tempDir);
+                      console.log(`[Batch Item ${i+1}] tempDir contents after download:`, files);
+                      if (files.length > 0) downloadedFile = path.join(tempDir, files[0]);
+                    }
+
+                    if (code === 0 && downloadedFile) {
+                      if (isTrimming) {
+                        const trimmedTempFile = path.join(tempDir, 'trimmed.' + finalExt);
+                        execFile(ffmpegPath, ['-y', '-i', downloadedFile, '-ss', startTime.toString(), '-to', endTime.toString(), '-c', 'copy', trimmedTempFile], (err, stdout, stderr) => {
+                          if (err) {
+                            console.error(`Item ${i+1} trim failed:`, err, stderr);
+                            resolve();
+                          } else {
+                            const stream = fs.createReadStream(trimmedTempFile);
+                            archive.append(stream, { name: fileName });
+                            stream.on('end', () => resolve());
+                            stream.on('error', () => resolve());
+                          }
+                        });
                       } else {
-                        const stream = fs.createReadStream(trimmedTempFile);
+                        const stream = fs.createReadStream(downloadedFile);
                         archive.append(stream, { name: fileName });
-                        stream.on('end', () => { fs.rmSync(tempDir, { recursive: true, force: true }); resolve(); });
-                        stream.on('error', () => { fs.rmSync(tempDir, { recursive: true, force: true }); resolve(); });
+                        stream.on('end', () => resolve());
+                        stream.on('error', () => resolve());
                       }
-                    });
-                    return; // Wait for execFile to resolve
-                  } else {
-                    const stream = fs.createReadStream(downloadedFile);
-                    archive.append(stream, { name: fileName });
-                    stream.on('end', () => { fs.rmSync(tempDir, { recursive: true, force: true }); resolve(); });
-                    stream.on('error', () => { fs.rmSync(tempDir, { recursive: true, force: true }); resolve(); });
-                    return; // Wait for stream to resolve
+                    } else {
+                      console.error(`[Batch Item ${i+1}] download failed. Code: ${code}. Extracted File: ${downloadedFile}. Log: ${ytdlErrorLog}`);
+                      resolve();
+                    }
+                  } catch (e) {
+                    console.error(`Item ${i+1} processing error:`, e);
+                    resolve();
                   }
-                } else {
-                  console.error(`[Batch Item ${i+1}] download failed. Code: ${code}. Extracted File: ${downloadedFile}. Log: ${ytdlErrorLog}`);
-                  if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
+                });
+                
+                downloadProcess.on('error', (err) => {
+                  console.error(`Item ${i+1} process error:`, err);
+                  resolve(); 
+                });
+              } else {
+                options.output = '-';
+                const downloadProcess = ytdl.exec(item.videoURL, options);
+                archive.append(downloadProcess.stdout, { name: fileName });
+                
+                downloadProcess.on('close', (code) => {
+                  if (code !== 0) console.error(`Item ${i+1} failed with code ${code}`);
                   resolve();
-                }
-              });
-              downloadProcess.on('error', (err) => {
-                console.error(`Item ${i+1} process error:`, err);
-                resolve(); 
-              });
-            } else {
-              const downloadProcess = ytdl.exec(item.videoURL, options);
-              archive.append(downloadProcess.stdout, { name: fileName });
-              
-              downloadProcess.on('close', (code) => {
-                if (code !== 0) console.error(`Item ${i+1} failed with code ${code}`);
-                resolve();
-              });
-              downloadProcess.on('error', (err) => {
-                console.error(`Item ${i+1} process error:`, err);
-                resolve(); 
-              });
+                });
+                
+                downloadProcess.on('error', (err) => {
+                  console.error(`Item ${i+1} stream error:`, err);
+                  resolve();
+                });
+              }
+            });
+          } catch (e) {
+            console.error(`Unexpected exception for item ${i+1}:`, e);
+          } finally {
+            if (tempDir && fs.existsSync(tempDir)) {
+              try {
+                fs.rmSync(tempDir, { recursive: true, force: true });
+              } catch (rmErr) {
+                console.error(`Failed to cleanup tempDir ${tempDir}:`, rmErr);
+              }
             }
-          });
+          }
         }
 
         archive.finalize();
