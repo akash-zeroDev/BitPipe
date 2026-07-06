@@ -1,4 +1,5 @@
 import express from "express";
+import { execFile } from "child_process";
 import cors from "cors";
 import ytdl from "yt-dlp-exec";
 import progressEstimator from "progress-estimator";
@@ -86,16 +87,9 @@ app.all("/downloadVideo", (req, res) => {
         httpChunkSize: '10M'
       };
 
-      if (startTime && endTime) {
-        options.downloadSections = `*${startTime}-${endTime}`;
-        options.forceKeyframesAtCuts = true;
-      }
-
       if (isMerging || isTrimming) {
         options.ffmpegLocation = ffmpegPath;
-        if (isTrimming) options.downloader = 'ffmpeg';
         if (isMerging) options.mergeOutputFormat = 'mkv';
-        if (isTrimming) options.remuxVideo = 'mkv';
       }
       if (useCookies) {
         options.cookies = "cookies.txt";
@@ -121,14 +115,35 @@ app.all("/downloadVideo", (req, res) => {
             if (!res.headersSent) res.status(500).json({ success: false, message: "Trim failed." });
             else res.end();
           } else {
-            if (!res.headersSent) {
-              res.setHeader("Content-Disposition", `attachment; filename="${videoTitle}.${fileExtension}"`);
-              res.setHeader("Content-Type", `video/${fileExtension}`);
+            if (isTrimming) {
+              const trimmedTempFile = tempFile + ".trimmed." + fileExtension;
+              execFile(ffmpegPath, ['-y', '-i', tempFile, '-ss', startTime.toString(), '-to', endTime.toString(), '-c', 'copy', trimmedTempFile], (err, stdout, stderr) => {
+                fs.unlink(tempFile, () => {});
+                if (err) {
+                  console.error("FFMPEG Trim Error:", err, stderr);
+                  if (!res.headersSent) res.status(500).json({ success: false, message: "Trim failed." });
+                  else res.end();
+                } else {
+                  if (!res.headersSent) {
+                    res.setHeader("Content-Disposition", `attachment; filename="${videoTitle}.${fileExtension}"`);
+                    res.setHeader("Content-Type", `video/${fileExtension}`);
+                  }
+                  const stream = fs.createReadStream(trimmedTempFile);
+                  stream.pipe(res);
+                  stream.on('end', () => fs.unlink(trimmedTempFile, () => {}));
+                  stream.on('error', () => fs.unlink(trimmedTempFile, () => {}));
+                }
+              });
+            } else {
+              if (!res.headersSent) {
+                res.setHeader("Content-Disposition", `attachment; filename="${videoTitle}.${fileExtension}"`);
+                res.setHeader("Content-Type", `video/${fileExtension}`);
+              }
+              const stream = fs.createReadStream(tempFile);
+              stream.pipe(res);
+              stream.on('end', () => fs.unlink(tempFile, () => {}));
+              stream.on('error', () => fs.unlink(tempFile, () => {}));
             }
-            const stream = fs.createReadStream(tempFile);
-            stream.pipe(res);
-            stream.on('end', () => fs.unlink(tempFile, () => {}));
-            stream.on('error', () => fs.unlink(tempFile, () => {}));
           }
         });
       } else {
@@ -274,16 +289,9 @@ app.post("/downloadBatch", async (req, res) => {
             httpChunkSize: '10M'
           };
 
-          if (isTrimming) {
-            options.downloadSections = `*${startTime}-${endTime}`;
-            options.forceKeyframesAtCuts = true;
-          }
-          
           if (isMerging || isTrimming) {
             options.ffmpegLocation = ffmpegPath;
-            if (isTrimming) options.downloader = 'ffmpeg';
             if (isMerging) options.mergeOutputFormat = 'mkv';
-            if (isTrimming) options.remuxVideo = 'mkv';
           }
           
           let finalExt = item.ext;
@@ -303,14 +311,32 @@ app.post("/downloadBatch", async (req, res) => {
               const downloadProcess = ytdl.exec(item.videoURL, options);
               downloadProcess.on('close', (code) => {
                 if (code === 0 && fs.existsSync(tempFile)) {
-                  const stream = fs.createReadStream(tempFile);
-                  archive.append(stream, { name: fileName });
-                  stream.on('end', () => fs.unlink(tempFile, () => {}));
-                  stream.on('error', () => fs.unlink(tempFile, () => {}));
+                  if (isTrimming) {
+                    const trimmedTempFile = tempFile + ".trimmed." + finalExt;
+                    execFile(ffmpegPath, ['-y', '-i', tempFile, '-ss', startTime.toString(), '-to', endTime.toString(), '-c', 'copy', trimmedTempFile], (err, stdout, stderr) => {
+                      fs.unlink(tempFile, () => {});
+                      if (err) {
+                        console.error(`Item ${i+1} trim failed:`, err, stderr);
+                        resolve();
+                      } else {
+                        const stream = fs.createReadStream(trimmedTempFile);
+                        archive.append(stream, { name: fileName });
+                        stream.on('end', () => { fs.unlink(trimmedTempFile, () => {}); resolve(); });
+                        stream.on('error', () => { fs.unlink(trimmedTempFile, () => {}); resolve(); });
+                      }
+                    });
+                    return; // Wait for execFile to resolve
+                  } else {
+                    const stream = fs.createReadStream(tempFile);
+                    archive.append(stream, { name: fileName });
+                    stream.on('end', () => { fs.unlink(tempFile, () => {}); resolve(); });
+                    stream.on('error', () => { fs.unlink(tempFile, () => {}); resolve(); });
+                    return; // Wait for stream to resolve
+                  }
                 } else {
-                  console.error(`Item ${i+1} trim failed.`);
+                  console.error(`Item ${i+1} download failed.`);
+                  resolve();
                 }
-                resolve();
               });
               downloadProcess.on('error', (err) => {
                 console.error(`Item ${i+1} process error:`, err);
