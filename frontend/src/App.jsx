@@ -7,6 +7,7 @@ function App() {
   const [url, setUrl] = useState("");
   const [detail, setDetail] = useState(false);
   const [data, setData] = useState(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   
   // Advanced Settings State
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -260,9 +261,13 @@ function App() {
 
       const query = new URLSearchParams(queryParams).toString();
       
+      setIsDownloading(true);
+      setTimeout(() => setIsDownloading(false), 5000); // Reset after 5s
+
       window.location.href = `${apiUrl}/downloadVideo?${query}`;
     } catch (err) {
       console.error("Error during download:", err);
+      setIsDownloading(false);
     }
   };
 
@@ -384,9 +389,9 @@ function App() {
               <div className="p-6 border-t border-gray-200 bg-white">
               {batchStatus === 'processing' ? (
                 <div className="w-full">
-                  <div className="flex justify-between text-sm font-bold text-gray-700 mb-2">
-                    <span>{batchTitle}</span>
-                    <span>{batchProgress} / {batchTotal}</span>
+                  <div className="flex justify-between items-center text-sm font-bold text-gray-700 mb-2">
+                    <span className="truncate mr-4">{batchTitle}</span>
+                    <span className="whitespace-nowrap shrink-0">{batchProgress} / {batchTotal}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
                     <div 
@@ -602,21 +607,39 @@ function App() {
                 </div>
 
                 {/* Unified Action Buttons */}
-                <div className="flex flex-col gap-3 mt-4">
-                  <button 
+                <div className="pt-2 flex flex-col gap-3">
+                  <button
                     onClick={() => handleDownload(false, false)}
-                    className="w-full bg-white hover:bg-gray-200 text-black font-bold py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-sm"
+                    disabled={isDownloading || (!includeVideo && !includeAudio)}
+                    className={`w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all duration-300 shadow-xl cursor-pointer ${
+                      isDownloading ? 'bg-indigo-700 opacity-90' : (!includeVideo && !includeAudio) ? 'bg-gray-600 opacity-50 cursor-not-allowed' : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 hover:scale-[1.02]'
+                    }`}
                   >
-                    <Download size={20} />
-                    Download {includeVideo && includeAudio ? "Combined" : includeVideo ? "Video" : includeAudio ? "Audio" : "Nothing Selected"}
+                    {isDownloading ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        Downloading Video...
+                      </>
+                    ) : (
+                      <>
+                        <Download size={20} />
+                        Download {includeVideo && includeAudio ? "Combined" : includeVideo ? "Video" : includeAudio ? "Audio" : "Nothing Selected"}
+                      </>
+                    )}
                   </button>
-                  <button 
+                  
+                  <button
                     onClick={() => handleDownload(false, true)}
-                    className="w-full bg-transparent hover:bg-gray-800 text-white border border-gray-700 font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition"
+                    disabled={!includeVideo && !includeAudio}
+                    className="w-full py-3 rounded-xl font-bold text-indigo-400 border border-indigo-500/30 flex items-center justify-center gap-2 transition-all duration-300 hover:bg-indigo-500/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Archive size={18} />
+                    <Check size={18} />
                     Add to Queue
                   </button>
+
+                  <p className="text-xs text-gray-500 text-center px-4 mt-2 leading-relaxed">
+                    <span className="text-gray-400 font-medium">Note:</span> Fetching may take a moment. Downloading may take several minutes depending on the video's length and selected quality.
+                  </p>
                 </div>
 
               </div>
