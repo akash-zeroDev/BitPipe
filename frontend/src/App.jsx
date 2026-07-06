@@ -344,13 +344,13 @@ function App() {
       {/* Queue Drawer Modal */}
       {showQueue && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-end z-50">
-          <div className="w-full md:w-96 bg-white h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="p-5 border-b flex justify-between items-center bg-indigo-600 text-white">
-              <h2 className="text-xl font-bold flex items-center gap-2"><Archive size={24}/> Batch Queue</h2>
-              <button onClick={() => setShowQueue(false)} className="hover:bg-indigo-700 p-2 rounded-full transition"><X size={24} /></button>
+          <div className="w-full md:w-96 bg-slate-50 h-full shadow-2xl border-l border-gray-200 flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-white">
+              <h2 className="text-xl font-extrabold text-gray-950 flex items-center gap-2"><Archive size={24}/> Batch Queue</h2>
+              <button onClick={() => setShowQueue(false)} className="text-gray-500 hover:text-gray-950 hover:bg-gray-100 p-2 rounded-full transition"><X size={24} /></button>
             </div>
             
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-gray-50">
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
               {queue.length === 0 ? (
                 <div className="text-center text-gray-500 mt-10 font-medium">Your queue is empty.</div>
               ) : (
@@ -403,20 +403,20 @@ function App() {
         </div>
       )}
 
-      <div className="min-h-screen w-full bg-gradient-to-br from-blue-400 to-pink-300 flex items-center justify-center p-4">
-        <div className="bg-white/20 w-full md:w-3/4 h-auto md:h-3/4 backdrop-blur-lg rounded-2xl border border-white/30 shadow-lg p-4 md:p-6 flex flex-col">
+      <div className="min-h-screen w-full bg-[#F9FAFB] flex items-center justify-center p-4">
+        <div className="bg-[#0A0A0B] w-full md:w-3/4 h-auto md:h-3/4 rounded-[2rem] border border-gray-800 shadow-2xl p-6 md:p-10 flex flex-col">
           
           {/* Mode Toggle */}
-          <div className="flex bg-white/30 rounded-full p-1 w-full max-w-md mx-auto mb-6">
+          <div className="flex bg-gray-900 border border-gray-800 rounded-full p-1.5 w-full max-w-md mx-auto mb-8 shadow-inner">
             <button 
               onClick={() => setMode('downloader')}
-              className={`flex-1 py-2 rounded-full font-bold text-sm transition ${mode === 'downloader' ? 'bg-white text-indigo-600 shadow-sm' : 'text-white hover:bg-white/20'}`}
+              className={`flex-1 py-2.5 rounded-full font-bold text-sm transition-all duration-200 ${mode === 'downloader' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
             >
               Downloader
             </button>
             <button 
               onClick={() => setMode('playlist')}
-              className={`flex-1 py-2 rounded-full font-bold text-sm transition ${mode === 'playlist' ? 'bg-white text-pink-600 shadow-sm' : 'text-white hover:bg-white/20'}`}
+              className={`flex-1 py-2.5 rounded-full font-bold text-sm transition-all duration-200 ${mode === 'playlist' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
             >
               Playlist Calculator
             </button>
@@ -424,21 +424,21 @@ function App() {
 
           {mode === 'downloader' ? (
             <>
-              <h1 className="text-white text-3xl md:text-5xl text-center md:text-left font-bold mt-4">
-                Your Videos, Offline Anytime
+              <h1 className="text-white text-4xl md:text-6xl text-center md:text-left font-extrabold tracking-tight mt-2">
+                Your Videos, <span className="text-gray-400">Offline Anytime.</span>
               </h1>
 
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-4 mt-6 md:mt-10">
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-4 mt-8 md:mt-12">
             <input
               type="text"
               placeholder="Enter Video URL here..."
-              className="bg-white p-3 rounded-full w-full md:w-1/2 block border-0 focus:outline-0"
+              className="bg-gray-900 text-white placeholder-gray-500 p-4 px-6 rounded-full w-full md:w-2/3 block border border-gray-800 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 transition"
               onChange={(e) => setUrl(e.target.value.trim())}
               value={url}
               onKeyDown={handleSubmit}
             />
             <div
-              className="rounded-full p-3 px-6 bg-amber-500 cursor-pointer text-white text-center w-full md:w-auto hover:bg-amber-600 transition"
+              className="rounded-full p-4 px-8 bg-white cursor-pointer text-black font-bold text-center w-full md:w-auto hover:bg-gray-200 transition"
               onClick={handleSubmit}
             >
               {isLoading ? "Fetching..." : "Fetch Video"}
@@ -452,15 +452,15 @@ function App() {
           )}
 
           {detail && (
-            <div className="mt-6 bg-white/40 rounded-xl p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-6 shadow-sm">
+            <div className="mt-10 bg-gray-900 border border-gray-800 rounded-3xl p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8 shadow-inner">
               {/* Thumbnail & Title */}
               <div className="flex flex-col gap-4">
                 <img
                   src={data?.data?.thumbnail}
-                  className="w-full aspect-video object-cover rounded-lg shadow-md"
+                  className="w-full aspect-video object-cover rounded-2xl shadow-lg border border-gray-800"
                   alt="thumbnail"
                 />
-                <h1 className="text-lg md:text-xl font-bold text-gray-800 line-clamp-2">
+                <h1 className="text-xl md:text-2xl font-bold text-white line-clamp-2 leading-tight">
                   {data?.data?.title}
                 </h1>
               </div>
@@ -472,13 +472,13 @@ function App() {
                 <div className="flex gap-3">
                   <button 
                     onClick={() => handleDownload(true, false)}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg transform hover:-translate-y-1"
+                    className="flex-1 bg-white hover:bg-gray-200 text-black font-bold py-4 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-lg"
                   >
                     <Download size={20} /> Download Highest Quality
                   </button>
                   <button 
                     onClick={() => handleDownload(true, true)}
-                    className="bg-pink-500 hover:bg-pink-600 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition shadow-lg transform hover:-translate-y-1"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center gap-2 transition shadow-lg"
                   >
                     <Archive size={20} /> Add to Queue
                   </button>
@@ -487,17 +487,17 @@ function App() {
                 {/* Trimming Toggle */}
                 <button 
                   onClick={() => setIsTrimming(!isTrimming)}
-                  className="mt-2 text-gray-700 font-semibold flex items-center justify-center gap-2 hover:text-indigo-800 transition"
+                  className="mt-4 text-gray-400 font-medium flex items-center justify-center gap-2 hover:text-white transition"
                 >
                   <Scissors size={18} />
                   {isTrimming ? "Disable Trimming" : "Trim Video Snippet"}
                 </button>
 
                 {isTrimming && (
-                  <div className="mt-2 p-5 bg-white/60 rounded-xl border border-white/40 flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                  <div className="mt-4 p-5 bg-gray-950 rounded-xl border border-gray-800 flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
                     <div className="flex justify-between items-center mb-2">
                       <input 
-                        className="font-bold text-gray-700 bg-white px-3 py-1 rounded-lg shadow-sm border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-24 text-center"
+                        className="font-bold text-white bg-gray-900 px-3 py-2 rounded-lg shadow-inner border border-gray-800 focus:outline-none focus:ring-1 focus:ring-gray-600 w-24 text-center"
                         value={startInput}
                         onChange={(e) => setStartInput(e.target.value)}
                         onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
@@ -554,13 +554,13 @@ function App() {
 
                 {/* Advanced Settings Panel */}
                 {showAdvanced && (
-                  <div className="mt-4 p-4 bg-white/60 rounded-xl border border-white/40 flex flex-col gap-5 animate-in fade-in slide-in-from-top-4 duration-300">
+                  <div className="mt-4 p-5 bg-gray-950 rounded-xl border border-gray-800 flex flex-col gap-5 animate-in fade-in slide-in-from-top-4 duration-300">
                     
                     {/* Video Row */}
                     <div className="flex flex-col gap-2">
                       <button 
                         onClick={() => setIncludeVideo(!includeVideo)}
-                        className={`w-full flex items-center justify-between p-3 rounded-lg font-bold transition border ${includeVideo ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300 hover:bg-gray-200'}`}
+                        className={`w-full flex items-center justify-between p-3.5 rounded-xl font-bold transition border ${includeVideo ? 'bg-gray-800 text-white border-gray-700' : 'bg-gray-900 text-gray-500 border-gray-800 hover:bg-gray-800'}`}
                       >
                         <div className="flex items-center gap-2">
                           <Video size={20} />
@@ -572,7 +572,7 @@ function App() {
                         disabled={!includeVideo}
                         value={selectedVideo}
                         onChange={(e) => setSelectedVideo(e.target.value)}
-                        className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-gray-100 bg-white"
+                        className="w-full p-3.5 rounded-xl border border-gray-800 bg-gray-900 text-white focus:outline-none focus:border-gray-600 disabled:opacity-50 disabled:bg-gray-950"
                       >
                         {videoFormats.map(v => (
                           <option key={v.format_id} value={v.format_id}>
@@ -586,7 +586,7 @@ function App() {
                     <div className="flex flex-col gap-2">
                       <button 
                         onClick={() => setIncludeAudio(!includeAudio)}
-                        className={`w-full flex items-center justify-between p-3 rounded-lg font-bold transition border ${includeAudio ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300 hover:bg-gray-200'}`}
+                        className={`w-full flex items-center justify-between p-3.5 rounded-xl font-bold transition border ${includeAudio ? 'bg-gray-800 text-white border-gray-700' : 'bg-gray-900 text-gray-500 border-gray-800 hover:bg-gray-800'}`}
                       >
                         <div className="flex items-center gap-2">
                           <Headphones size={20} />
@@ -611,14 +611,14 @@ function App() {
                     <div className="flex gap-3 mt-2">
                       <button 
                         onClick={() => handleDownload(false, false)}
-                        className="flex-1 bg-gray-800 hover:bg-black text-white font-bold py-4 px-4 rounded-lg flex items-center justify-center gap-2 transition"
+                        className="flex-1 bg-white hover:bg-gray-200 text-black font-bold py-4 px-4 rounded-xl flex items-center justify-center gap-2 transition"
                       >
                         <Download size={20} />
                         Download {includeVideo && includeAudio ? "Combined" : includeVideo ? "Video" : "Audio"}
                       </button>
                       <button 
                         onClick={() => handleDownload(false, true)}
-                        className="flex-1 bg-pink-500 hover:bg-pink-600 text-white font-bold py-4 px-4 rounded-lg flex items-center justify-center gap-2 transition"
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-4 rounded-xl flex items-center justify-center gap-2 transition"
                       >
                         <Archive size={20} />
                         Add to Queue
@@ -632,10 +632,10 @@ function App() {
             </>
           ) : (
             <div className="flex flex-col items-center mt-4 pb-10">
-              <h1 className="text-white text-3xl md:text-5xl text-center font-bold mb-2">
-                Playlist Length Calculator
+              <h1 className="text-white text-4xl md:text-6xl text-center font-extrabold tracking-tight mt-2 mb-4">
+                Playlist <span className="text-gray-400">Calculator.</span>
               </h1>
-              <p className="text-white/90 text-center mb-8 font-medium">
+              <p className="text-gray-400 text-center mb-10 text-lg">
                 Find out exactly how long it takes to binge your favorite playlist!
               </p>
 
@@ -643,13 +643,13 @@ function App() {
                 <input
                   type="text"
                   placeholder="Paste YouTube Playlist URL..."
-                  className="bg-white p-4 rounded-full w-full block border-0 focus:outline-0 text-gray-700 shadow-inner"
+                  className="bg-gray-900 text-white placeholder-gray-500 p-4 px-6 rounded-full w-full block border border-gray-800 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 transition shadow-inner"
                   onChange={(e) => setPlaylistUrl(e.target.value.trim())}
                   value={playlistUrl}
                   onKeyDown={(e) => e.key === 'Enter' && handlePlaylistSubmit()}
                 />
                 <button
-                  className="rounded-full p-4 px-8 bg-pink-500 font-bold cursor-pointer text-white text-center w-full md:w-auto hover:bg-pink-600 transition shadow-lg whitespace-nowrap"
+                  className="rounded-full p-4 px-8 bg-white font-bold cursor-pointer text-black text-center w-full md:w-auto hover:bg-gray-200 transition shadow-lg whitespace-nowrap"
                   onClick={handlePlaylistSubmit}
                 >
                   {isPlaylistLoading ? "Calculating..." : "Calculate"}
@@ -663,24 +663,24 @@ function App() {
               )}
 
               {playlistData && (
-                <div className="mt-8 bg-white/60 backdrop-blur-md rounded-2xl p-6 md:p-10 w-full max-w-2xl border border-white/40 shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <div className="mt-10 bg-gray-900 rounded-[2rem] p-8 md:p-12 w-full max-w-2xl border border-gray-800 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
                   <div className="flex flex-col gap-2 items-center text-center">
-                    <span className="bg-pink-100 text-pink-600 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-2">Results</span>
-                    <h2 className="text-2xl font-bold text-gray-800 line-clamp-2">{playlistData.title}</h2>
-                    <p className="text-gray-500 font-medium">by {playlistData.channel}</p>
+                    <span className="bg-gray-800 text-gray-300 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest mb-4 border border-gray-700">Analysis Complete</span>
+                    <h2 className="text-3xl font-extrabold text-white line-clamp-2 leading-tight">{playlistData.title}</h2>
+                    <p className="text-gray-400 font-medium mt-1 text-lg">by {playlistData.channel}</p>
                     
                     {/* Advanced Settings */}
-                    <div className="w-full bg-white/50 rounded-xl p-4 mt-4 border border-white/60 shadow-sm flex flex-col md:flex-row gap-4 justify-between">
+                    <div className="w-full bg-gray-950 rounded-2xl p-6 mt-8 border border-gray-800 shadow-inner flex flex-col md:flex-row gap-6 justify-between">
                       <div className="flex flex-col text-left flex-1">
-                        <label className="text-xs font-bold text-gray-500 uppercase mb-1">Start Video</label>
-                        <input type="number" min={1} max={playlistData.durations.length} className="bg-white p-2 rounded-lg border-gray-200 outline-none w-full text-sm" placeholder="1" value={playlistStart} onChange={(e) => setPlaylistStart(e.target.value)} />
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Start Video</label>
+                        <input type="number" min={1} max={playlistData.durations.length} className="bg-gray-900 text-white p-3 rounded-xl border border-gray-800 focus:outline-none focus:border-gray-600 focus:ring-1 focus:ring-gray-600 w-full text-sm transition" placeholder="1" value={playlistStart} onChange={(e) => setPlaylistStart(e.target.value)} />
                       </div>
                       <div className="flex flex-col text-left flex-1">
-                        <label className="text-xs font-bold text-gray-500 uppercase mb-1">End Video</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">End Video</label>
                         <input type="number" min={1} max={playlistData.durations.length} className="bg-white p-2 rounded-lg border-gray-200 outline-none w-full text-sm" placeholder={playlistData.durations.length} value={playlistEnd} onChange={(e) => setPlaylistEnd(e.target.value)} />
                       </div>
                       <div className="flex flex-col text-left flex-1">
-                        <label className="text-xs font-bold text-gray-500 uppercase mb-1">Speed</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Speed</label>
                         <select className="bg-white p-2 rounded-lg border-gray-200 outline-none w-full text-sm" value={playbackSpeed} onChange={(e) => setPlaybackSpeed(e.target.value)}>
                           <option value="0.5">0.5x</option>
                           <option value="1">1x (Normal)</option>
@@ -692,14 +692,14 @@ function App() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 w-full mt-6">
-                      <div className="bg-white/80 rounded-xl p-4 flex flex-col items-center shadow-sm">
-                        <span className="text-3xl font-extrabold text-indigo-600">{getCalculatedVideoCount()}</span>
-                        <span className="text-xs text-gray-500 font-bold uppercase mt-1">Videos</span>
+                    <div className="grid grid-cols-2 gap-6 w-full mt-8">
+                      <div className="bg-gray-950 border border-gray-800 rounded-2xl p-6 flex flex-col items-center justify-center shadow-sm">
+                        <span className="text-4xl font-extrabold text-white">{getCalculatedVideoCount()}</span>
+                        <span className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-2">Videos</span>
                       </div>
                       <div className="bg-white/80 rounded-xl p-4 flex flex-col items-center shadow-sm">
-                        <span className="text-3xl font-extrabold text-pink-600">{formatDuration(getCalculatedDuration())}</span>
-                        <span className="text-xs text-gray-500 font-bold uppercase mt-1">Total Time</span>
+                        <span className="text-4xl font-extrabold text-white">{formatDuration(getCalculatedDuration())}</span>
+                        <span className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-2">Total Time</span>
                       </div>
                     </div>
                   </div>
