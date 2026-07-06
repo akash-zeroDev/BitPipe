@@ -53,7 +53,7 @@ function App() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(false);
-  const apiUrl = "http://localhost:3000";
+  const apiUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
   const fetchData = async (url) => {
     setDetail(false);
