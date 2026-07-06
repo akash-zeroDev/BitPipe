@@ -19,10 +19,7 @@ const app = express();
 const logger = progressEstimator();
 const activeDownloads = new Map(); // Tracks download readiness
 
-app.get("/api/downloadStatus", (req, res) => {
-  const status = activeDownloads.get(req.query.downloadId) || 'pending';
-  res.json({ status });
-});
+// downloadStatus route moved down
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -33,8 +30,13 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-const port = process.env.PORT || 3000;
 
+app.get("/api/downloadStatus", (req, res) => {
+  const status = activeDownloads.get(req.query.downloadId) || 'pending';
+  res.json({ status });
+});
+
+const port = process.env.PORT || 3000;
 
 
 app.post("/getVideoInfo", async (req, res) => {
