@@ -92,8 +92,8 @@ app.all("/downloadVideo", (req, res) => {
       }
 
       if (isMerging || isTrimming) {
-        options.downloader = 'ffmpeg';
         options.ffmpegLocation = ffmpegPath;
+        if (isTrimming) options.downloader = 'ffmpeg';
         if (isMerging) options.mergeOutputFormat = 'mkv';
         if (isTrimming) options.remuxVideo = 'mkv';
       }
@@ -280,8 +280,8 @@ app.post("/downloadBatch", async (req, res) => {
           }
           
           if (isMerging || isTrimming) {
-            options.downloader = 'ffmpeg';
             options.ffmpegLocation = ffmpegPath;
+            if (isTrimming) options.downloader = 'ffmpeg';
             if (isMerging) options.mergeOutputFormat = 'mkv';
             if (isTrimming) options.remuxVideo = 'mkv';
           }
