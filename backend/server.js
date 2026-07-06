@@ -17,6 +17,12 @@ const cache = new NodeCache({ stdTTL: 3600 }); // Cache responses for 1 hour
 
 const app = express();
 const logger = progressEstimator();
+const activeDownloads = new Map(); // Tracks download readiness
+
+app.get("/api/downloadStatus", (req, res) => {
+  const status = activeDownloads.get(req.query.downloadId) || 'pending';
+  res.json({ status });
+});
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -74,6 +80,10 @@ app.all("/downloadVideo", (req, res) => {
     const formatId = req.body?.format?.format_id || req.query.format_id;
     const videoTitle = req.body?.title || req.query.title;
     let fileExtension = req.body?.format?.ext || req.query.ext;
+    
+    const downloadId = req.body?.downloadId || req.query.downloadId;
+    if (downloadId) activeDownloads.set(downloadId, 'processing');
+    const markReady = () => { if (downloadId) activeDownloads.set(downloadId, 'ready'); };
 
     const startTime = req.body?.startTime || req.query.startTime;
     const endTime = req.body?.endTime || req.query.endTime;
@@ -123,6 +133,7 @@ app.all("/downloadVideo", (req, res) => {
             startDownload(true);
           } else if (code !== 0 || !downloadedFile) {
             console.error(`Trim process failed. Code: ${code}. Log: ${errorLog}`);
+            markReady();
             if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
             if (!res.headersSent) res.status(500).json({ success: false, message: "Trim failed." });
             else res.end();
@@ -132,10 +143,12 @@ app.all("/downloadVideo", (req, res) => {
               execFile(ffmpegPath, ['-y', '-i', downloadedFile, '-ss', startTime.toString(), '-to', endTime.toString(), '-c', 'copy', trimmedTempFile], (err, stdout, stderr) => {
                 if (err) {
                   console.error("FFMPEG Trim Error:", err, stderr);
+                  markReady();
                   if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
                   if (!res.headersSent) res.status(500).json({ success: false, message: "Trim failed." });
                   else res.end();
                 } else {
+                  markReady();
                   if (!res.headersSent) {
                     res.setHeader("Content-Disposition", `attachment; filename="${videoTitle}.${fileExtension}"`);
                     res.setHeader("Content-Type", `video/${fileExtension}`);
@@ -147,6 +160,7 @@ app.all("/downloadVideo", (req, res) => {
                 }
               });
             } else {
+              markReady();
               if (!res.headersSent) {
                 res.setHeader("Content-Disposition", `attachment; filename="${videoTitle}.${fileExtension}"`);
                 res.setHeader("Content-Type", `video/${fileExtension}`);
@@ -164,6 +178,7 @@ app.all("/downloadVideo", (req, res) => {
 
         downloadProcess.stdout.on('data', (chunk) => {
           if (!startedSending) {
+            markReady();
             if (!res.headersSent) {
               res.setHeader("Content-Disposition", `attachment; filename="${videoTitle}.${fileExtension}"`);
               res.setHeader("Content-Type", `video/${fileExtension}`);
@@ -182,6 +197,7 @@ app.all("/downloadVideo", (req, res) => {
             startDownload(true);
           } else if (code !== 0) {
             console.error(`Download process exited with error code: ${code}`);
+            markReady();
             if (!res.headersSent) res.status(500).json({ success: false, message: "Download failed." });
             else res.end();
           } else {
@@ -197,6 +213,7 @@ app.all("/downloadVideo", (req, res) => {
     startDownload(false);
   } catch (error) {
     console.error("Failed to initiate download:", error);
+    if (req.query.downloadId) activeDownloads.set(req.query.downloadId, 'ready');
     if (!res.headersSent) {
       res.status(500).json({
         success: false,

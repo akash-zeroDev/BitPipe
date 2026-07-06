@@ -259,20 +259,29 @@ function App() {
         queryParams.endTime = endTime;
       }
 
+      const downloadId = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+      queryParams.downloadId = downloadId;
       const query = new URLSearchParams(queryParams).toString();
       
       setIsDownloading(true);
       
-      // UX Trick: We can't detect when the file officially starts downloading via location.href.
-      // So we use a long 25-second fallback, AND clear it instantly if the user focuses the window
-      // (which happens right after dismissing the native browser "Save As..." popup).
-      const resetDownload = () => {
+      // Robust Polling: Check backend every 2s to see if it's ready to stream
+      const pollStatus = setInterval(async () => {
+        try {
+          const res = await fetch(`${apiUrl}/api/downloadStatus?downloadId=${downloadId}`);
+          const statusData = await res.json();
+          if (statusData.status === 'ready' || statusData.status === 'error') {
+            setIsDownloading(false);
+            clearInterval(pollStatus);
+          }
+        } catch (e) {}
+      }, 2000);
+
+      // Ultimate safety fallback (5 minutes max processing time)
+      setTimeout(() => {
         setIsDownloading(false);
-        window.removeEventListener('focus', resetDownload);
-      };
-      
-      window.addEventListener('focus', resetDownload);
-      setTimeout(resetDownload, 25000); 
+        clearInterval(pollStatus);
+      }, 300000); 
 
       window.location.href = `${apiUrl}/downloadVideo?${query}`;
     } catch (err) {
