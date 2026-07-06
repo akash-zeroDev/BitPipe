@@ -295,7 +295,8 @@ app.post("/downloadBatch", async (req, res) => {
             format: formatId,
             output: '-',
             jsRuntimes: 'node',
-            httpChunkSize: '10M'
+            httpChunkSize: '10M',
+            cookies: 'cookies.txt'
           };
 
           if (isMerging || isTrimming) {
@@ -319,10 +320,14 @@ app.post("/downloadBatch", async (req, res) => {
               options.output = path.join(tempDir, 'video.%(ext)s');
 
               const downloadProcess = ytdl.exec(item.videoURL, options);
+              let ytdlErrorLog = "";
+              downloadProcess.stderr.on('data', d => { ytdlErrorLog += d.toString(); });
+              
               downloadProcess.on('close', (code) => {
                 let downloadedFile = null;
                 if (fs.existsSync(tempDir)) {
                   const files = fs.readdirSync(tempDir);
+                  console.log(`[Batch Item ${i+1}] tempDir contents after download:`, files);
                   if (files.length > 0) downloadedFile = path.join(tempDir, files[0]);
                 }
 
@@ -350,7 +355,7 @@ app.post("/downloadBatch", async (req, res) => {
                     return; // Wait for stream to resolve
                   }
                 } else {
-                  console.error(`Item ${i+1} download failed.`);
+                  console.error(`[Batch Item ${i+1}] download failed. Code: ${code}. Extracted File: ${downloadedFile}. Log: ${ytdlErrorLog}`);
                   if (fs.existsSync(tempDir)) fs.rmSync(tempDir, { recursive: true, force: true });
                   resolve();
                 }
